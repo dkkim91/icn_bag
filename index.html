@@ -245,9 +245,11 @@
       const dateSelect = document.getElementById("date");
       dateSelect.innerHTML = `
         <option value="">전체</option>
-        <option value="${todayFormatted}" selected>${todayFormatted}</option>
+        <option value="${todayFormatted}">${todayFormatted}</option>
         <option value="${tomorrowFormatted}">${tomorrowFormatted}</option>
       `;
+      // 명시적으로 '오늘' 날짜를 선택하도록 설정
+      dateSelect.value = todayFormatted;
 
       try {
         let res = await fetch(BAG_JSON_URL + "?" + Date.now()); // API 새로 호출
@@ -256,7 +258,7 @@
             throw new Error(`HTTP error! status: ${res.status}`);
         }
         BAG_DATA = await res.json();
-        renderBagTable();
+        renderBagTable(); // 데이터 로드 후 필터링 및 렌더링
         
         // 갱신시각을 현재 한국 시간으로 항상 업데이트
         let currentKST = new Date().toLocaleString('ko-KR', {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12:false});
