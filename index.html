@@ -120,121 +120,97 @@
     const BAG_JSON_URL = "https://script.google.com/macros/s/AKfycbzImYZ6K03UKU7DuziljYKDVPFQErQghW75rtCdHjgKJeY93tMVeDRAgcUaORjGNdw5RA/exec";
     let BAG_DATA = [];
 
-    // KST(HH:MM) 변환 함수 (ZULU TIME, YYYYMMDDHHMM 또는 HH:MM 문자열을 한국시간 HH:MM으로 변환)
-    function formatToKST_HHmm(timeStr) {
-      if (typeof timeStr !== 'string' || !timeStr) return "";
+    // 숫자/문자 상관없이 YYYYMMDD → "오늘/내일" 반환
+    function dateKor(dt) {
+      if (!dt) return ""; 
+      dt = dt.toString();
+      if (dt.length !== 8 || !/^\d{8}$/.test(dt)) return dt; 
 
-      // ZULU TIME (ISO 8601) 형식 처리 예: "2024-07-14T03:00:00Z"
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const dateObj = new Date(dt.substring(0,4), dt.substring(4,6)-1, dt.substring(6,8));
+      const diff = (dateObj.getTime() - today.getTime()) / (1000 * 3600 * 24);
+
+      if (diff === 0) return "오늘";
+      if (diff === 1) return "내일";
+      return dt;
+    }
+
+    function getFormattedDate(date) {
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      return `${year}${month}${day}`;
+    }
+
+    // YYYYMMDDHHMM(숫자/문자) → HH:MM (KST)
+    function formatToKST_HHmm(timeStr) {
+      if (!timeStr) return "";
+      timeStr = timeStr.toString();
+
       if (timeStr.includes('T') && timeStr.endsWith('Z')) {
         let d = new Date(timeStr);
         if (!isNaN(d.getTime())) {
-          d.setHours(d.getHours() + 9); // UTC에 9시간 더해서 KST
-          return d.toISOString().substring(11, 16); // HH:MM 추출
+          d.setHours(d.getHours() + 9);
+          return d.toISOString().substring(11, 16);
         }
       }
-      // YYYYMMDDHHMM 형식 처리 예: "202507130540"
       if (timeStr.length === 12 && /^\d+$/.test(timeStr)) {
           return timeStr.substring(8,10) + ":" + timeStr.substring(10,12);
       }
-      // 그 외 HH:MM 형식으로 들어오는 경우 대비 (변환 필요 없음)
       if (/^\d{1,2}:\d{2}$/.test(timeStr)) return timeStr;
-
-      return ""; // 변환할 수 없는 형식
+      return "";
     }
-
-    // KST(YYYY-MM-DD HH:MM:SS) 변환 함수 (갱신시각용)
+    // 갱신시각
     function formatToKST_HHmmss(timeStr) {
-        if (typeof timeStr !== 'string' || !timeStr) return "";
-
-        // ISO 8601 ZULU TIME 형식 처리: "2024-07-14T03:00:00Z"
-        if (timeStr.includes('T') && timeStr.endsWith('Z')) {
-            let d = new Date(timeStr);
-            if (!isNaN(d.getTime())) {
-                // UTC 시간을 KST로 변환
-                d.setHours(d.getHours() + 9);
-                // YYYY-MM-DD HH:MM:SS 형식으로 포맷
-                const year = d.getFullYear();
-                const month = String(d.getMonth() + 1).padStart(2, '0');
-                const day = String(d.getDate()).padStart(2, '0');
-                const hours = String(d.getHours()).padStart(2, '0');
-                const minutes = String(d.getMinutes()).padStart(2, '0');
-                const seconds = String(d.getSeconds()).padStart(2, '0');
-                return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-            }
+      if (!timeStr) return "";
+      if (typeof timeStr !== 'string') timeStr = timeStr.toString();
+      if (timeStr.includes('T') && timeStr.endsWith('Z')) {
+        let d = new Date(timeStr);
+        if (!isNaN(d.getTime())) {
+          d.setHours(d.getHours() + 9);
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          const hours = String(d.getHours()).padStart(2, '0');
+          const minutes = String(d.getMinutes()).padStart(2, '0');
+          const seconds = String(d.getSeconds()).padStart(2, '0');
+          return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
         }
-        // 그 외 형식은 그대로 반환 (혹은 원하는 포맷으로 추가 변환 로직 구현)
-        return timeStr;
+      }
+      return timeStr;
     }
 
-    // 날짜 YYYYMMDD → "오늘/내일" 또는 원본 YYYYMMDD 반환 (테이블 본문 표시용)
-    function dateKor(dt) {
-      // dt가 유효한 문자열이고 YYYYMMDD 형식(8자리)인지 확인
-      if (typeof dt !== 'string' || dt.length !== 8 || !/^\d{8}$/.test(dt)) return dt || ""; 
-
-      const now = new Date();
-      // 한국 시간 기준 오늘 날짜 (시,분,초,밀리초 제거)
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      
-      // dt를 Date 객체로 변환 (월은 0부터 시작하므로 -1)
-      const dateObj = new Date(dt.substring(0,4), dt.substring(4,6)-1, dt.substring(6,8));
-      
-      // 날짜 차이 계산 (일 단위)
-      const diff = (dateObj.getTime() - today.getTime()) / (1000 * 3600 * 24);
-      
-      if (diff === 0) return "오늘";
-      if (diff === 1) return "내일";
-      return dt; // "오늘" 또는 "내일"이 아니면 원본 YYYYMMDD 반환
-    }
-
-    // YYYYMMDD 형식으로 날짜 반환 (필터 옵션용)
-    function getFormattedDate(date) {
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
-        return `${year}${month}${day}`;
-    }
-
-    // '차이' 시간을 HH:MM 형식으로 변환 (ZULU Time 또는 기존 HH:MM 형식 모두 처리)
     function formatDifferenceTime(diffStr) {
-        if (typeof diffStr !== 'string' || !diffStr) return "";
-
-        // ZULU Time 형식인 경우 (예: "1899-12-29T15:19:08.000Z")
-        if (diffStr.includes('T') && diffStr.endsWith('Z')) {
-            const date = new Date(diffStr);
-            if (!isNaN(date.getTime())) {
-                // 1899-12-29T00:00:00.000Z를 기준점으로 잡고 시간 차이 계산
-                const epochDate = new Date('1899-12-29T00:00:00.000Z');
-                let diffMillis = date.getTime() - epochDate.getTime();
-                
-                // 음수 차이 처리 (예: -00:10)
-                let sign = '';
-                if (diffMillis < 0) {
-                    sign = '-';
-                    diffMillis = Math.abs(diffMillis);
-                } else {
-                    sign = '+';
-                }
-
-                const totalSeconds = Math.floor(diffMillis / 1000);
-                const hours = Math.floor(totalSeconds / 3600);
-                const minutes = Math.floor((totalSeconds % 3600) / 60);
-
-                return `${sign}${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
-            }
+      if (!diffStr) return "";
+      if (typeof diffStr !== 'string') diffStr = diffStr.toString();
+      if (diffStr.includes('T') && diffStr.endsWith('Z')) {
+        const date = new Date(diffStr);
+        if (!isNaN(date.getTime())) {
+          const epochDate = new Date('1899-12-29T00:00:00.000Z');
+          let diffMillis = date.getTime() - epochDate.getTime();
+          let sign = '';
+          if (diffMillis < 0) {
+            sign = '-';
+            diffMillis = Math.abs(diffMillis);
+          } else {
+            sign = '+';
+          }
+          const totalSeconds = Math.floor(diffMillis / 1000);
+          const hours = Math.floor(totalSeconds / 3600);
+          const minutes = Math.floor((totalSeconds % 3600) / 60);
+          return `${sign}${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}`;
         }
-        // 이미 "+HH:MM" 또는 "-HH:MM" 형식인 경우 그대로 반환
-        if (/^[+-]\d{2}:\d{2}$/.test(diffStr)) {
-            return diffStr;
-        }
-        // 다른 알 수 없는 형식의 경우 그대로 반환하거나 빈 문자열
-        return diffStr; 
+      }
+      if (/^[+-]\d{2}:\d{2}$/.test(diffStr)) return diffStr;
+      return diffStr; 
     }
 
     // 1. 전체 API fetch 및 필터 옵션 초기화
     async function loadBagDataAndRender() {
       document.getElementById("bag-tbody").innerHTML = `<tr><td colspan="21">데이터를 불러오는 중...</td></tr>`; 
-      
-      // '출발일' 필터 옵션 동적 생성
+
+      // 날짜 옵션
       const today = new Date();
       const tomorrow = new Date(today);
       tomorrow.setDate(today.getDate() + 1);
@@ -248,25 +224,19 @@
         <option value="${todayFormatted}">${todayFormatted}</option>
         <option value="${tomorrowFormatted}">${tomorrowFormatted}</option>
       `;
-      // 명시적으로 '오늘' 날짜를 선택하도록 설정
       dateSelect.value = todayFormatted;
 
       try {
-        let res = await fetch(BAG_JSON_URL + "?" + Date.now()); // API 새로 호출
-        // HTTP 상태 코드 확인 (200 OK가 아니면 에러 처리)
-        if (!res.ok) {
-            throw new Error(`HTTP error! status: ${res.status}`);
-        }
-        BAG_DATA = await res.json();
-        renderBagTable(); // 데이터 로드 후 필터링 및 렌더링
-        
-        // 갱신시각을 현재 한국 시간으로 항상 업데이트
+        let res = await fetch(BAG_JSON_URL + "?" + Date.now());
+        if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+        let raw = await res.json();
+        BAG_DATA = Array.isArray(raw) ? raw : (raw.data || []);
+        renderBagTable();
         let currentKST = new Date().toLocaleString('ko-KR', {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12:false});
         document.getElementById("updated_at").innerText = currentKST;
       } catch(e) {
         console.error("데이터 로드 오류:", e); 
         document.getElementById("bag-tbody").innerHTML = `<tr><td colspan="21">데이터 로드 오류가 발생했습니다. (콘솔 확인)</td></tr>`;
-        // 오류 발생 시에도 갱신시각을 현재 시간으로 표시 (마지막 시도 시간)
         let currentKST = new Date().toLocaleString('ko-KR', {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12:false});
         document.getElementById("updated_at").innerText = currentKST + " (오류 발생)";
       }
@@ -276,35 +246,34 @@
     function renderBagTable() {
       let tbody = document.getElementById("bag-tbody");
       let f = {};
-      // 모든 필터 요소의 값을 가져옵니다.
       ["date","kal_oal","airlineCode","flightId","airportcode","op_type","scheduleDatetimeHour","status","terminalId","fstandPosition","runway","gateNo","bagCarouselId","exitNumber"].forEach(id=>{
         f[id] = document.getElementById(id).value.trim();
       });
 
       let filtered = BAG_DATA.filter(row => {
-        // '출발일' 필터링 로직: 필터 값이 YYYYMMDD 형식으로 오므로 row.date와 직접 비교
-        if (f.date && row.date !== f.date) return false;
+        // date는 int로 오므로, string으로 변환 후 비교
+        if (f.date && row.date.toString() !== f.date) return false;
 
-        // '예정시' 필터링은 KST 시간 (HH)만 비교
+        // 예정시(HH) 필터
         if (f.scheduleDatetimeHour) {
-            let scheduledHour = formatToKST_HHmm(row.scheduleDatetime).substring(0,2);
-            if (scheduledHour !== f.scheduleDatetimeHour.padStart(2,"0")) return false;
+          let scheduled = row.scheduleDatetime.toString();
+          let scheduledHH = scheduled.length === 12 ? scheduled.substr(8,2) : "";
+          if (scheduledHH !== f.scheduleDatetimeHour.padStart(2,"0")) return false;
         }
 
-        // 나머지 필터링 (대소문자 구분 없이 부분 일치)
+        // 나머지 필터
         const commonFilters = ["kal_oal", "airlineCode", "flightId", "op_type", "status", 
                                "terminalId", "fstandPosition", "runway", "gateNo", "bagCarouselId"];
         for (let k of commonFilters) {
           if (f[k] && (row[k] || "").toString().toLowerCase().indexOf(f[k].toLowerCase()) === -1) return false;
         }
-        
-        // airportcode 필터 특수 처리 (airportcode 또는 airportCode)
+        // airportcode 필터 특수 처리
         if (f.airportcode && 
             ( (row.airportcode || "").toString().toLowerCase().indexOf(f.airportcode.toLowerCase()) === -1 && 
               (row.airportCode || "").toString().toLowerCase().indexOf(f.airportcode.toLowerCase()) === -1 )
            ) return false;
 
-        // exitNumber 필터 특수 처리 (exitNumber 또는 exit)
+        // exitNumber 필터 특수 처리
         if (f.exitNumber && 
             ( (row.exitNumber || "").toString().toLowerCase().indexOf(f.exitNumber.toLowerCase()) === -1 && 
               (row.exit || "").toString().toLowerCase().indexOf(f.exitNumber.toLowerCase()) === -1 )
@@ -315,7 +284,7 @@
 
       document.getElementById("rowCount").innerText = `총 ${filtered.length}건`; 
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="21">일치하는 데이터가 없습니다.</td></tr>`; // 컬럼 수 21으로 변경
+        tbody.innerHTML = `<tr><td colspan="21">일치하는 데이터가 없습니다.</td></tr>`;
         return;
       }
       tbody.innerHTML = filtered.map(row => `
@@ -345,18 +314,15 @@
       `).join('');
     }
 
-    // 전체조회(새로고침) 버튼
     document.getElementById("refreshBtn").onclick = function() {
       loadBagDataAndRender();
     };
 
-    // 검색/필터 폼 제출 시
     document.getElementById("filters").onsubmit = function(e) {
       e.preventDefault(); 
       renderBagTable(); 
     };
 
-    // 페이지 로드 시 최초 1회 데이터 로드 및 렌더링
     loadBagDataAndRender();
   </script>
 </body>
