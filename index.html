@@ -36,9 +36,7 @@
     </div>
     <form class="filters" id="filters">
       <label>출발일
-        <select id="date">
-          <option value="">오늘/내일</option>
-        </select>
+        <select id="date"></select>
       </label>
       <label>KAL/OAL
         <select id="kal_oal"><option value="">전체</option><option value="KAL">KAL</option><option value="OAL">OAL</option></select>
@@ -117,23 +115,18 @@
   <script>
     const BAG_JSON_URL = "https://script.google.com/macros/s/AKfycbzImYZ6K03UKU7DuziljYKDVPFQErQghW75rtCdHjgKJeY93tMVeDRAgcUaORjGNdw5RA/exec";
     let BAG_DATA = [];
-    function dateKor(dt) {
-      if (!dt) return ""; 
-      dt = dt.toString();
-      if (dt.length !== 8 || !/^\d{8}$/.test(dt)) return dt; 
-      const now = new Date();
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      const dateObj = new Date(dt.substring(0,4), dt.substring(4,6)-1, dt.substring(6,8));
-      const diff = (dateObj.getTime() - today.getTime()) / (1000 * 3600 * 24);
-      if (diff === 0) return "오늘";
-      if (diff === 1) return "내일";
-      return dt;
-    }
+
     function getFormattedDate(date) {
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
       return `${year}${month}${day}`;
+    }
+    function dateKor(dt) {
+      if (!dt) return ""; 
+      dt = dt.toString();
+      if (dt.length !== 8 || !/^\d{8}$/.test(dt)) return dt; 
+      return dt;
     }
     function formatDifferenceTime(diffStr) {
       if (!diffStr) return "";
@@ -164,6 +157,7 @@
       str = str.toString();
       return str.length >= 4 ? str.slice(-4) : str;
     }
+
     async function loadBagDataAndRender() {
       document.getElementById("bag-tbody").innerHTML = `<tr><td colspan="20">데이터를 불러오는 중...</td></tr>`; 
       const today = new Date();
@@ -171,16 +165,21 @@
       tomorrow.setDate(today.getDate() + 1);
       const todayFormatted = getFormattedDate(today);
       const tomorrowFormatted = getFormattedDate(tomorrow);
-      // 출발일 필터를 오늘/내일로만 제한
+
+      // 출발일 필터는 yyyyMMdd 두 개만 표시
       const dateSelect = document.getElementById("date");
-      dateSelect.innerHTML = `<option value="">오늘/내일</option>`;
-      dateSelect.value = "";
+      dateSelect.innerHTML = `
+        <option value="${todayFormatted}">${todayFormatted}</option>
+        <option value="${tomorrowFormatted}">${tomorrowFormatted}</option>
+      `;
+      dateSelect.value = todayFormatted;
+
       try {
         let res = await fetch(BAG_JSON_URL + "?" + Date.now());
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         let raw = await res.json();
         BAG_DATA = Array.isArray(raw) ? raw : (raw.data || []);
-        renderBagTable(todayFormatted, tomorrowFormatted);
+        renderBagTable();
         let currentKST = new Date().toLocaleString('ko-KR', {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12:false});
         document.getElementById("updated_at").innerText = currentKST;
       } catch(e) {
@@ -190,16 +189,18 @@
         document.getElementById("updated_at").innerText = currentKST + " (오류 발생)";
       }
     }
-    function renderBagTable(todayFormatted, tomorrowFormatted) {
+
+    function renderBagTable() {
       let tbody = document.getElementById("bag-tbody");
       let f = {};
-      ["kal_oal","airlineCode","flightId","airportcode","op_type","scheduleDatetimeHour","status","terminalId","fstandPosition","runway","gateNo","bagCarouselId","exitNumber"].forEach(id=>{
+      ["date","kal_oal","airlineCode","flightId","airportcode","op_type","scheduleDatetimeHour","status","terminalId","fstandPosition","runway","gateNo","bagCarouselId","exitNumber"].forEach(id=>{
         f[id] = document.getElementById(id).value.trim();
       });
+
       let filtered = BAG_DATA.filter(row => {
         let rowDate = row.date ? row.date.toString() : "";
-        // 오늘/내일(YYYYMMDD)만 표시(그 외는 아예 제외!)
-        if (!(rowDate === todayFormatted || rowDate === tomorrowFormatted)) return false;
+        // 무조건 필터 select에서 선택한 날짜만 표시 (오늘/내일만)
+        if (f.date && rowDate !== f.date) return false;
         if (f.scheduleDatetimeHour) {
           let scheduled = row.scheduleDatetime ? row.scheduleDatetime.toString() : "";
           let scheduledHH = scheduled.length === 12 ? scheduled.substr(8,2) : "";
@@ -220,6 +221,7 @@
            ) return false;
         return true; 
       });
+
       document.getElementById("rowCount").innerText = `총 ${filtered.length}건`; 
       if (filtered.length === 0) {
         tbody.innerHTML = `<tr><td colspan="20">일치하는 데이터가 없습니다.</td></tr>`;
@@ -250,19 +252,19 @@
         </tr>
       `).join('');
     }
+
     document.getElementById("refreshBtn").onclick = function() {
       loadBagDataAndRender();
     };
     document.getElementById("filters").onsubmit = function(e) {
-      e.preventDefault(); 
-      const today = new Date();
-      const tomorrow = new Date(today);
-      tomorrow.setDate(today.getDate() + 1);
-      const todayFormatted = getFormattedDate(today);
-      const tomorrowFormatted = getFormattedDate(tomorrow);
-      renderBagTable(todayFormatted, tomorrowFormatted); 
+      e.preventDefault();
+      renderBagTable();
     };
-    loadBagDataAndRender();
+
+    // 최초 로딩 시 오늘로 선택, 오늘/내일만 조회
+    window.onload = function() {
+      loadBagDataAndRender();
+    };
   </script>
 </body>
 </html>
