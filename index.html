@@ -122,22 +122,60 @@
     const BAG_JSON_URL = "https://script.google.com/macros/s/AKfycbzImYZ6K03UKU7DuziljYKDVPFQErQghW75rtCdHjgKJeY93tMVeDRAgcUaORjGNdw5RA/exec";
     let BAG_DATA = [];
 
-    // KST(hh) 추출 함수
-    function hh(str) {
-      // 202507130540 → 05
-      // str이 문자열인지, 길이가 충분한지 확인
-      if (typeof str === 'string' && str.length >= 10) return str.substring(8,10);
-      return "";
+    // KST(hh:mm) 변환 함수 (ZULU TIME 또는 YYYYMMDDHHMM 문자열을 한국시간으로 변환)
+    function formatToKST_HHmm(timeStr) {
+      if (typeof timeStr !== 'string' || !timeStr) return "";
+
+      // ZULU TIME (ISO 8601) 형식 처리 예: "2024-07-14T03:00:00Z"
+      if (timeStr.includes('T') && timeStr.endsWith('Z')) {
+        let d = new Date(timeStr);
+        if (!isNaN(d.getTime())) {
+          d.setHours(d.getHours() + 9); // UTC에 9시간 더해서 KST
+          return d.toISOString().substring(11, 16); // HH:MM 추출
+        }
+      }
+      // YYYYMMDDHHMM 형식 처리 예: "202507130540"
+      if (timeStr.length === 12 && /^\d+$/.test(timeStr)) {
+          return timeStr.substring(8,10) + ":" + timeStr.substring(10,12);
+      }
+      // 그 외 HH:MM 형식으로 들어오는 경우 대비 (변환 필요 없음)
+      if (/^\d{1,2}:\d{2}$/.test(timeStr)) return timeStr;
+
+      return ""; // 변환할 수 없는 형식
     }
+
+    // KST(hh:mm:ss) 변환 함수 (갱신시각용)
+    function formatToKST_HHmmss(timeStr) {
+        if (typeof timeStr !== 'string' || !timeStr) return "";
+
+        // ISO 8601 ZULU TIME 형식 처리: "2024-07-14T03:00:00Z"
+        if (timeStr.includes('T') && timeStr.endsWith('Z')) {
+            let d = new Date(timeStr);
+            if (!isNaN(d.getTime())) {
+                d.setHours(d.getHours() + 9); // UTC에 9시간 더해서 KST
+                return d.toISOString().replace('T', ' ').substring(0, 19); // YYYY-MM-DD HH:MM:SS 추출
+            }
+        }
+        // 그 외 형식은 그대로 반환 (혹은 원하는 포맷으로 추가 변환 로직 구현)
+        // 예를 들어 "2024-07-14 12:30:45" 같은 문자열이라면 그대로 반환
+        return timeStr;
+    }
+
+
     // 날짜 YYYYMMDD → "오늘/내일" 변환
     function dateKor(dt) {
       // dt가 유효한 문자열이고 YYYYMMDD 형식(8자리)인지 확인
       if (typeof dt !== 'string' || dt.length !== 8) return "";
       const now = new Date();
+      // 한국 시간 기준 오늘 날짜 (시,분,초,밀리초 제거)
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-      // dt가 YYYYMMDD 형식이라고 가정
+      
+      // dt를 Date 객체로 변환 (월은 0부터 시작하므로 -1)
       const dateObj = new Date(dt.substring(0,4), dt.substring(4,6)-1, dt.substring(6,8));
-      const diff = (dateObj - today) / (1000 * 3600 * 24);
+      
+      // 날짜 차이 계산
+      const diff = (dateObj.getTime() - today.getTime()) / (1000 * 3600 * 24);
+      
       if (diff === 0) return "오늘";
       if (diff === 1) return "내일";
       return dt; // "오늘" 또는 "내일"이 아니면 원본 dt 반환
@@ -148,10 +186,14 @@
       document.getElementById("bag-tbody").innerHTML = `<tr><td colspan="21">데이터를 불러오는 중...</td></tr>`;
       try {
         let res = await fetch(BAG_JSON_URL + "?" + Date.now());
+        // HTTP 상태 코드 확인 (200 OK가 아니면 에러 처리)
+        if (!res.ok) {
+            throw new Error(`HTTP error! status: ${res.status}`);
+        }
         BAG_DATA = await res.json();
         renderBagTable();
-        // 가장 최신 updated_at 표시 (데이터가 있다면 첫 번째 행의 updated_at, 없으면 현재 시간)
-        let updated = BAG_DATA.length > 0 ? BAG_DATA[0].updated_at : new Date().toLocaleString('ko-KR', {hour12:false});
+        // 가장 최신 updated_at 표시 (데이터가 있다면 첫 번째 행의 updated_at을 한국 시간으로 변환, 없으면 현재 시간)
+        let updated = BAG_DATA.length > 0 ? formatToKST_HHmmss(BAG_DATA[0].updated_at) : new Date().toLocaleString('ko-KR', {hour12:false});
         document.getElementById("updated_at").innerText = updated;
       } catch(e) {
         console.error("데이터 로드 오류:", e); // 콘솔에 실제 오류 객체 로깅
@@ -172,25 +214,33 @@
         // 'date' 필터링 (dateKor 함수 사용)
         if (f.date && dateKor(row.date) !== f.date) return false;
 
-        // 'scheduleDatetime'은 hh 함수를 사용하여 시간만 비교
-        if (f.scheduleDatetime && hh(row.scheduleDatetime) !== f.scheduleDatetime.padStart(2,"0")) return false;
+        // 'scheduleDatetime'은 hh 함수 대신 formatToKST_HHmm을 사용하여 KST 시간만 비교
+        // 필터 입력이 2자리 숫자여야 하므로 padStart는 유지
+        if (f.scheduleDatetime) {
+            let scheduledHour = formatToKST_HHmm(row.scheduleDatetime).substring(0,2);
+            if (scheduledHour !== f.scheduleDatetime.padStart(2,"0")) return false;
+        }
 
         // 나머지 필터링 (대소문자 구분 없이 부분 일치)
-        // 'airportcode'와 'exitNumber'는 데이터 필드 이름이 다를 수 있으므로 OR 조건 사용
-        // 이 부분은 원본 index_bag.html의 로직에서 airportcode, exitNumber만 예외 처리하고 있었으므로 유지.
-        // for-of 루프를 풀어서 개별 처리하는 방식으로 명확히 함.
-        if (f.kal_oal && (row.kal_oal||"").toLowerCase().indexOf(f.kal_oal.toLowerCase()) === -1) return false;
-        if (f.airlineCode && (row.airlineCode||"").toLowerCase().indexOf(f.airlineCode.toLowerCase()) === -1) return false;
-        if (f.flightId && (row.flightId||"").toLowerCase().indexOf(f.flightId.toLowerCase()) === -1) return false;
-        if (f.airportcode && ((row.airportcode||"").toLowerCase().indexOf(f.airportcode.toLowerCase()) === -1 && (row.airportCode||"").toLowerCase().indexOf(f.airportcode.toLowerCase()) === -1)) return false;
-        if (f.op_type && (row.op_type||"").toLowerCase().indexOf(f.op_type.toLowerCase()) === -1) return false;
-        if (f.status && (row.status||"").toLowerCase().indexOf(f.status.toLowerCase()) === -1) return false;
-        if (f.terminalId && (row.terminalId||"").toLowerCase().indexOf(f.terminalId.toLowerCase()) === -1) return false;
-        if (f.fstandPosition && (row.fstandPosition||"").toLowerCase().indexOf(f.fstandPosition.toLowerCase()) === -1) return false;
-        if (f.runway && (row.runway||"").toLowerCase().indexOf(f.runway.toLowerCase()) === -1) return false;
-        if (f.gateNo && (row.gateNo||"").toLowerCase().indexOf(f.gateNo.toLowerCase()) === -1) return false;
-        if (f.bagCarouselId && (row.bagCarouselId||"").toLowerCase().indexOf(f.bagCarouselId.toLowerCase()) === -1) return false;
-        if (f.exitNumber && ((row.exitNumber||"").toLowerCase().indexOf(f.exitNumber.toLowerCase()) === -1 && (row.exit||"").toLowerCase().indexOf(f.exitNumber.toLowerCase()) === -1)) return false;
+        // airportcode와 exitNumber는 데이터 필드 이름이 다를 수 있으므로 OR 조건 사용
+        // 일반적인 필터는 루프로 처리
+        const commonFilters = ["kal_oal", "airlineCode", "flightId", "op_type", "status", 
+                               "terminalId", "fstandPosition", "runway", "gateNo", "bagCarouselId"];
+        for (let k of commonFilters) {
+          if (f[k] && (row[k] || "").toString().toLowerCase().indexOf(f[k].toLowerCase()) === -1) return false;
+        }
+        
+        // airportcode 필터 특수 처리 (airportcode 또는 airportCode)
+        if (f.airportcode && 
+            ( (row.airportcode || "").toString().toLowerCase().indexOf(f.airportcode.toLowerCase()) === -1 && 
+              (row.airportCode || "").toString().toLowerCase().indexOf(f.airportcode.toLowerCase()) === -1 )
+           ) return false;
+
+        // exitNumber 필터 특수 처리 (exitNumber 또는 exit)
+        if (f.exitNumber && 
+            ( (row.exitNumber || "").toString().toLowerCase().indexOf(f.exitNumber.toLowerCase()) === -1 && 
+              (row.exit || "").toString().toLowerCase().indexOf(f.exitNumber.toLowerCase()) === -1 )
+           ) return false;
 
         return true; // 모든 필터를 통과하면 포함
       });
@@ -206,10 +256,11 @@
           <td>${row.kal_oal||""}</td>
           <td>${row.airlineCode||""}</td>
           <td>${row.flightId||""}</td>
-          <td>${row.airportcode||row.airportCode||""}</td> <td>${row.op_type||""}</td>
-          <td>${hh(row.scheduleDatetime)||""}</td>
-          <td>${hh(row.estimatedDatetime)||""}</td>
-          <td>${hh(row.landingDatetime)||""}</td>
+          <td>${row.airportcode||row.airportCode||""}</td>
+          <td>${row.op_type||""}</td>
+          <td>${formatToKST_HHmm(row.scheduleDatetime)||""}</td>
+          <td>${formatToKST_HHmm(row.estimatedDatetime)||""}</td>
+          <td>${formatToKST_HHmm(row.landingDatetime)||""}</td>
           <td>${row.difftime||""}</td>
           <td>${row.status||""}</td>
           <td>${row.terminalId||""}</td>
@@ -217,10 +268,11 @@
           <td>${row.runway||""}</td>
           <td>${row.gateNo||""}</td>
           <td>${row.bagCarouselId||""}</td>
-          <td>${row.bagFirstTime||""}</td>
-          <td>${row.bagLastTime||""}</td>
-          <td>${row.exitNumber||row.exit||""}</td> <td>${row.aircraftType||""}</td>
-          <td>${row.updated_at||""}</td>
+          <td>${formatToKST_HHmm(row.bagFirstTime)||""}</td>
+          <td>${formatToKST_HHmm(row.bagLastTime)||""}</td>
+          <td>${row.exitNumber||row.exit||""}</td>
+          <td>${row.aircraftType||""}</td>
+          <td>${formatToKST_HHmmss(row.updated_at)||""}</td>
         </tr>
       `).join('');
     }
