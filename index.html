@@ -116,71 +116,27 @@
     </div>
   </div>
   <script>
-    // === API URL ===
     const BAG_JSON_URL = "https://script.google.com/macros/s/AKfycbzImYZ6K03UKU7DuziljYKDVPFQErQghW75rtCdHjgKJeY93tMVeDRAgcUaORjGNdw5RA/exec";
     let BAG_DATA = [];
 
-    // 숫자/문자 상관없이 YYYYMMDD → "오늘/내일" 반환
     function dateKor(dt) {
       if (!dt) return ""; 
       dt = dt.toString();
       if (dt.length !== 8 || !/^\d{8}$/.test(dt)) return dt; 
-
       const now = new Date();
       const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       const dateObj = new Date(dt.substring(0,4), dt.substring(4,6)-1, dt.substring(6,8));
       const diff = (dateObj.getTime() - today.getTime()) / (1000 * 3600 * 24);
-
       if (diff === 0) return "오늘";
       if (diff === 1) return "내일";
       return dt;
     }
-
     function getFormattedDate(date) {
       const year = date.getFullYear();
       const month = String(date.getMonth() + 1).padStart(2, '0');
       const day = String(date.getDate()).padStart(2, '0');
       return `${year}${month}${day}`;
     }
-
-    // YYYYMMDDHHMM(숫자/문자) → HH:MM (KST)
-    function formatToKST_HHmm(timeStr) {
-      if (!timeStr) return "";
-      timeStr = timeStr.toString();
-
-      if (timeStr.includes('T') && timeStr.endsWith('Z')) {
-        let d = new Date(timeStr);
-        if (!isNaN(d.getTime())) {
-          d.setHours(d.getHours() + 9);
-          return d.toISOString().substring(11, 16);
-        }
-      }
-      if (timeStr.length === 12 && /^\d+$/.test(timeStr)) {
-          return timeStr.substring(8,10) + ":" + timeStr.substring(10,12);
-      }
-      if (/^\d{1,2}:\d{2}$/.test(timeStr)) return timeStr;
-      return "";
-    }
-    // 갱신시각
-    function formatToKST_HHmmss(timeStr) {
-      if (!timeStr) return "";
-      if (typeof timeStr !== 'string') timeStr = timeStr.toString();
-      if (timeStr.includes('T') && timeStr.endsWith('Z')) {
-        let d = new Date(timeStr);
-        if (!isNaN(d.getTime())) {
-          d.setHours(d.getHours() + 9);
-          const year = d.getFullYear();
-          const month = String(d.getMonth() + 1).padStart(2, '0');
-          const day = String(d.getDate()).padStart(2, '0');
-          const hours = String(d.getHours()).padStart(2, '0');
-          const minutes = String(d.getMinutes()).padStart(2, '0');
-          const seconds = String(d.getSeconds()).padStart(2, '0');
-          return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-        }
-      }
-      return timeStr;
-    }
-
     function formatDifferenceTime(diffStr) {
       if (!diffStr) return "";
       if (typeof diffStr !== 'string') diffStr = diffStr.toString();
@@ -205,19 +161,38 @@
       if (/^[+-]\d{2}:\d{2}$/.test(diffStr)) return diffStr;
       return diffStr; 
     }
+    function formatToKST_HHmmss(timeStr) {
+      if (!timeStr) return "";
+      if (typeof timeStr !== 'string') timeStr = timeStr.toString();
+      if (timeStr.includes('T') && timeStr.endsWith('Z')) {
+        let d = new Date(timeStr);
+        if (!isNaN(d.getTime())) {
+          d.setHours(d.getHours() + 9);
+          const year = d.getFullYear();
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const day = String(d.getDate()).padStart(2, '0');
+          const hours = String(d.getHours()).padStart(2, '0');
+          const minutes = String(d.getMinutes()).padStart(2, '0');
+          const seconds = String(d.getSeconds()).padStart(2, '0');
+          return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
+        }
+      }
+      return timeStr;
+    }
+    // ★ 오른쪽 4자리만 추출 함수
+    function last4(str) {
+      if (!str) return "";
+      str = str.toString();
+      return str.length >= 4 ? str.slice(-4) : str;
+    }
 
-    // 1. 전체 API fetch 및 필터 옵션 초기화
     async function loadBagDataAndRender() {
       document.getElementById("bag-tbody").innerHTML = `<tr><td colspan="21">데이터를 불러오는 중...</td></tr>`; 
-
-      // 날짜 옵션
       const today = new Date();
       const tomorrow = new Date(today);
       tomorrow.setDate(today.getDate() + 1);
-
       const todayFormatted = getFormattedDate(today);
       const tomorrowFormatted = getFormattedDate(tomorrow);
-
       const dateSelect = document.getElementById("date");
       dateSelect.innerHTML = `
         <option value="">전체</option>
@@ -242,7 +217,6 @@
       }
     }
 
-    // 2. 테이블 필터+렌더링
     function renderBagTable() {
       let tbody = document.getElementById("bag-tbody");
       let f = {};
@@ -251,34 +225,25 @@
       });
 
       let filtered = BAG_DATA.filter(row => {
-        // date는 int로 오므로, string으로 변환 후 비교
         if (f.date && row.date.toString() !== f.date) return false;
-
-        // 예정시(HH) 필터
         if (f.scheduleDatetimeHour) {
-          let scheduled = row.scheduleDatetime.toString();
+          let scheduled = row.scheduleDatetime ? row.scheduleDatetime.toString() : "";
           let scheduledHH = scheduled.length === 12 ? scheduled.substr(8,2) : "";
           if (scheduledHH !== f.scheduleDatetimeHour.padStart(2,"0")) return false;
         }
-
-        // 나머지 필터
         const commonFilters = ["kal_oal", "airlineCode", "flightId", "op_type", "status", 
                                "terminalId", "fstandPosition", "runway", "gateNo", "bagCarouselId"];
         for (let k of commonFilters) {
           if (f[k] && (row[k] || "").toString().toLowerCase().indexOf(f[k].toLowerCase()) === -1) return false;
         }
-        // airportcode 필터 특수 처리
         if (f.airportcode && 
             ( (row.airportcode || "").toString().toLowerCase().indexOf(f.airportcode.toLowerCase()) === -1 && 
               (row.airportCode || "").toString().toLowerCase().indexOf(f.airportcode.toLowerCase()) === -1 )
            ) return false;
-
-        // exitNumber 필터 특수 처리
         if (f.exitNumber && 
             ( (row.exitNumber || "").toString().toLowerCase().indexOf(f.exitNumber.toLowerCase()) === -1 && 
               (row.exit || "").toString().toLowerCase().indexOf(f.exitNumber.toLowerCase()) === -1 )
            ) return false;
-
         return true; 
       });
 
@@ -295,9 +260,9 @@
           <td>${row.flightId||""}</td>
           <td>${row.airportcode||row.airportCode||""}</td>
           <td>${row.op_type||""}</td>
-          <td>${formatToKST_HHmm(row.scheduleDatetime)||""}</td>
-          <td>${formatToKST_HHmm(row.estimatedDatetime)||""}</td>
-          <td>${formatToKST_HHmm(row.landingDatetime)||""}</td>
+          <td>${last4(row.scheduleDatetime)||""}</td>
+          <td>${last4(row.estimatedDatetime)||""}</td>
+          <td>${last4(row.landingDatetime)||""}</td>
           <td>${formatDifferenceTime(row.difftime)||""}</td>
           <td>${row.status||""}</td>
           <td>${row.terminalId||""}</td>
@@ -305,8 +270,8 @@
           <td>${row.runway||""}</td>
           <td>${row.gateNo||""}</td>
           <td>${row.bagCarouselId||""}</td>
-          <td>${formatToKST_HHmm(row.bagFirstTime)||""}</td>
-          <td>${formatToKST_HHmm(row.bagLastTime)||""}</td>
+          <td>${last4(row.bagFirstTime)||""}</td>
+          <td>${last4(row.bagLastTime)||""}</td>
           <td>${row.exitNumber||row.exit||""}</td>
           <td>${row.aircraftType||""}</td>
           <td>${formatToKST_HHmmss(row.updated_at)||""}</td>
@@ -317,12 +282,10 @@
     document.getElementById("refreshBtn").onclick = function() {
       loadBagDataAndRender();
     };
-
     document.getElementById("filters").onsubmit = function(e) {
       e.preventDefault(); 
       renderBagTable(); 
     };
-
     loadBagDataAndRender();
   </script>
 </body>
