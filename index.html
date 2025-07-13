@@ -38,9 +38,7 @@
       <label>출발일
         <select id="date">
           <option value="">전체</option>
-          <option value="오늘" selected>오늘</option>
-          <option value="내일">내일</option>
-        </select>
+          </select>
       </label>
       <label>KAL/OAL
         <select id="kal_oal"><option value="">전체</option><option value="KAL">KAL</option><option value="OAL">OAL</option></select>
@@ -188,9 +186,33 @@
       return dt; // "오늘" 또는 "내일"이 아니면 원본 YYYYMMDD 반환
     }
 
-    // 1. 전체 API fetch
+    // YYYYMMDD 형식으로 날짜 반환
+    function getFormattedDate(date) {
+        const year = date.getFullYear();
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        return `${year}${month}${day}`;
+    }
+
+    // 1. 전체 API fetch 및 필터 옵션 초기화
     async function loadBagDataAndRender() {
       document.getElementById("bag-tbody").innerHTML = `<tr><td colspan="20">데이터를 불러오는 중...</td></tr>`;
+      
+      // '출발일' 필터 옵션 동적 생성
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+
+      const todayFormatted = getFormattedDate(today);
+      const tomorrowFormatted = getFormattedDate(tomorrow);
+
+      const dateSelect = document.getElementById("date");
+      dateSelect.innerHTML = `
+        <option value="">전체</option>
+        <option value="${todayFormatted}" selected>오늘 (${todayFormatted})</option>
+        <option value="${tomorrowFormatted}">내일 (${tomorrowFormatted})</option>
+      `;
+
       try {
         let res = await fetch(BAG_JSON_URL + "?" + Date.now());
         // HTTP 상태 코드 확인 (200 OK가 아니면 에러 처리)
@@ -220,13 +242,8 @@
       let filtered = BAG_DATA.filter(row => {
         // '출발일' 필터링 로직 개선: 필터 값이 '오늘'/'내일' 또는 YYYYMMDD 형식에 따라 비교
         if (f.date) {
-            const rowDateFormatted = dateKor(row.date); // "오늘", "내일" 또는 YYYYMMDD
-            if (f.date === "오늘" || f.date === "내일") {
-                if (rowDateFormatted !== f.date) return false;
-            } else {
-                // 필터 값이 YYYYMMDD 형식일 경우 (예: "20250714") row.date와 직접 비교
-                if (row.date !== f.date) return false;
-            }
+            // 필터 값이 YYYYMMDD 형식일 경우 row.date와 직접 비교
+            if (row.date !== f.date) return false;
         }
 
         // '예정시' 필터링은 KST 시간 (HH)만 비교
