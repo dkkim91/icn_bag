@@ -37,8 +37,8 @@
     <form class="filters" id="filters">
       <label>출발일
         <select id="date">
-          <option value="">전체</option>
-          </select>
+          <option value="">오늘/내일</option>
+        </select>
       </label>
       <label>KAL/OAL
         <select id="kal_oal"><option value="">전체</option><option value="KAL">KAL</option><option value="OAL">OAL</option></select>
@@ -106,11 +106,10 @@
             <th>마지막수하물</th>
             <th>출구</th>
             <th>기종</th>
-            <th>갱신시각</th>
           </tr>
         </thead>
         <tbody id="bag-tbody">
-          <tr><td colspan="21">데이터를 불러오는 중...</td></tr>
+          <tr><td colspan="20">데이터를 불러오는 중...</td></tr>
         </tbody>
       </table>
     </div>
@@ -118,7 +117,6 @@
   <script>
     const BAG_JSON_URL = "https://script.google.com/macros/s/AKfycbzImYZ6K03UKU7DuziljYKDVPFQErQghW75rtCdHjgKJeY93tMVeDRAgcUaORjGNdw5RA/exec";
     let BAG_DATA = [];
-
     function dateKor(dt) {
       if (!dt) return ""; 
       dt = dt.toString();
@@ -161,71 +159,48 @@
       if (/^[+-]\d{2}:\d{2}$/.test(diffStr)) return diffStr;
       return diffStr; 
     }
-    function formatToKST_HHmmss(timeStr) {
-      if (!timeStr) return "";
-      if (typeof timeStr !== 'string') timeStr = timeStr.toString();
-      if (timeStr.includes('T') && timeStr.endsWith('Z')) {
-        let d = new Date(timeStr);
-        if (!isNaN(d.getTime())) {
-          d.setHours(d.getHours() + 9);
-          const year = d.getFullYear();
-          const month = String(d.getMonth() + 1).padStart(2, '0');
-          const day = String(d.getDate()).padStart(2, '0');
-          const hours = String(d.getHours()).padStart(2, '0');
-          const minutes = String(d.getMinutes()).padStart(2, '0');
-          const seconds = String(d.getSeconds()).padStart(2, '0');
-          return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
-        }
-      }
-      return timeStr;
-    }
-    // ★ 오른쪽 4자리만 추출 함수
     function last4(str) {
       if (!str) return "";
       str = str.toString();
       return str.length >= 4 ? str.slice(-4) : str;
     }
-
     async function loadBagDataAndRender() {
-      document.getElementById("bag-tbody").innerHTML = `<tr><td colspan="21">데이터를 불러오는 중...</td></tr>`; 
+      document.getElementById("bag-tbody").innerHTML = `<tr><td colspan="20">데이터를 불러오는 중...</td></tr>`; 
       const today = new Date();
       const tomorrow = new Date(today);
       tomorrow.setDate(today.getDate() + 1);
       const todayFormatted = getFormattedDate(today);
       const tomorrowFormatted = getFormattedDate(tomorrow);
+      // 출발일 필터를 오늘/내일로만 제한
       const dateSelect = document.getElementById("date");
-      dateSelect.innerHTML = `
-        <option value="">전체</option>
-        <option value="${todayFormatted}">${todayFormatted}</option>
-        <option value="${tomorrowFormatted}">${tomorrowFormatted}</option>
-      `;
-      dateSelect.value = todayFormatted;
-
+      dateSelect.innerHTML = `<option value="">오늘/내일</option>`;
+      dateSelect.value = "";
       try {
         let res = await fetch(BAG_JSON_URL + "?" + Date.now());
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         let raw = await res.json();
         BAG_DATA = Array.isArray(raw) ? raw : (raw.data || []);
-        renderBagTable();
+        renderBagTable(todayFormatted, tomorrowFormatted);
         let currentKST = new Date().toLocaleString('ko-KR', {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12:false});
         document.getElementById("updated_at").innerText = currentKST;
       } catch(e) {
         console.error("데이터 로드 오류:", e); 
-        document.getElementById("bag-tbody").innerHTML = `<tr><td colspan="21">데이터 로드 오류가 발생했습니다. (콘솔 확인)</td></tr>`;
+        document.getElementById("bag-tbody").innerHTML = `<tr><td colspan="20">데이터 로드 오류가 발생했습니다. (콘솔 확인)</td></tr>`;
         let currentKST = new Date().toLocaleString('ko-KR', {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12:false});
         document.getElementById("updated_at").innerText = currentKST + " (오류 발생)";
       }
     }
-
-    function renderBagTable() {
+    // 오늘, 내일만 필터 (통합적으로)
+    function renderBagTable(todayFormatted, tomorrowFormatted) {
       let tbody = document.getElementById("bag-tbody");
       let f = {};
-      ["date","kal_oal","airlineCode","flightId","airportcode","op_type","scheduleDatetimeHour","status","terminalId","fstandPosition","runway","gateNo","bagCarouselId","exitNumber"].forEach(id=>{
+      ["kal_oal","airlineCode","flightId","airportcode","op_type","scheduleDatetimeHour","status","terminalId","fstandPosition","runway","gateNo","bagCarouselId","exitNumber"].forEach(id=>{
         f[id] = document.getElementById(id).value.trim();
       });
-
       let filtered = BAG_DATA.filter(row => {
-        if (f.date && row.date.toString() !== f.date) return false;
+        let rowDate = row.date ? row.date.toString() : "";
+        // 오늘/내일(20250714/20250715)만 통합적으로 표시
+        if (!(rowDate === todayFormatted || rowDate === tomorrowFormatted)) return false;
         if (f.scheduleDatetimeHour) {
           let scheduled = row.scheduleDatetime ? row.scheduleDatetime.toString() : "";
           let scheduledHH = scheduled.length === 12 ? scheduled.substr(8,2) : "";
@@ -249,7 +224,7 @@
 
       document.getElementById("rowCount").innerText = `총 ${filtered.length}건`; 
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="21">일치하는 데이터가 없습니다.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="20">일치하는 데이터가 없습니다.</td></tr>`;
         return;
       }
       tbody.innerHTML = filtered.map(row => `
@@ -274,17 +249,21 @@
           <td>${last4(row.bagLastTime)||""}</td>
           <td>${row.exitNumber||row.exit||""}</td>
           <td>${row.aircraftType||""}</td>
-          <td>${formatToKST_HHmmss(row.updated_at)||""}</td>
         </tr>
       `).join('');
     }
-
     document.getElementById("refreshBtn").onclick = function() {
       loadBagDataAndRender();
     };
     document.getElementById("filters").onsubmit = function(e) {
       e.preventDefault(); 
-      renderBagTable(); 
+      // 오늘/내일 기준값을 넘겨줘야 함
+      const today = new Date();
+      const tomorrow = new Date(today);
+      tomorrow.setDate(today.getDate() + 1);
+      const todayFormatted = getFormattedDate(today);
+      const tomorrowFormatted = getFormattedDate(tomorrow);
+      renderBagTable(todayFormatted, tomorrowFormatted); 
     };
     loadBagDataAndRender();
   </script>
