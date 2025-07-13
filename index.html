@@ -229,7 +229,7 @@
             }
         }
 
-        // 'scheduleDatetime'은 KST 시간 (HH)만 비교
+        // '예정시' 필터링은 KST 시간 (HH)만 비교
         if (f.scheduleDatetime) {
             let scheduledHour = formatToKST_HHmm(row.scheduleDatetime).substring(0,2);
             if (scheduledHour !== f.scheduleDatetime.padStart(2,"0")) return false;
