@@ -117,7 +117,6 @@
   </div>
   <script>
     // === API URL ===
-    // 기존 index.html의 SHEET_JSON_URL 대신 수하물 데이터 URL로 변경
     const BAG_JSON_URL = "https://script.google.com/macros/s/AKfycbzImYZ6K03UKU7DuziljYKDVPFQErQghW75rtCdHjgKJeY93tMVeDRAgcUaORjGNdw5RA/exec";
     let BAG_DATA = [];
 
@@ -251,7 +250,7 @@
       `;
 
       try {
-        let res = await fetch(BAG_JSON_URL + "?" + Date.now());
+        let res = await fetch(BAG_JSON_URL + "?" + Date.now()); // API 새로 호출
         // HTTP 상태 코드 확인 (200 OK가 아니면 에러 처리)
         if (!res.ok) {
             throw new Error(`HTTP error! status: ${res.status}`);
@@ -259,13 +258,15 @@
         BAG_DATA = await res.json();
         renderBagTable();
         
-        // 가장 최신 updated_at 표시 (데이터가 있다면 첫 번째 행의 updated_at을 한국 시간으로 변환, 없으면 현재 시간)
-        // BAG_DATA[0]?.updated_at이 UTC일 경우 formatToKST_HHmmss를 적용
-        let updated = BAG_DATA.length > 0 ? formatToKST_HHmmss(BAG_DATA[0].updated_at) : new Date().toLocaleString('ko-KR', {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12:false});
-        document.getElementById("updated_at").innerText = updated;
+        // 갱신시각을 현재 한국 시간으로 항상 업데이트
+        let currentKST = new Date().toLocaleString('ko-KR', {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12:false});
+        document.getElementById("updated_at").innerText = currentKST;
       } catch(e) {
         console.error("데이터 로드 오류:", e); 
         document.getElementById("bag-tbody").innerHTML = `<tr><td colspan="21">데이터 로드 오류가 발생했습니다. (콘솔 확인)</td></tr>`;
+        // 오류 발생 시에도 갱신시각을 현재 시간으로 표시 (마지막 시도 시간)
+        let currentKST = new Date().toLocaleString('ko-KR', {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12:false});
+        document.getElementById("updated_at").innerText = currentKST + " (오류 발생)";
       }
     }
 
