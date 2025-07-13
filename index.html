@@ -119,85 +119,86 @@
   </div>
   <script>
     // === API URL ===
-    const BAG_JSON_URL = "https://script.google.com/macros/s/AKfycbzImYZ6K03UKU7DuziljYKDVPFQErQghW75rtCdHjgKJeY93tMVeDRAgcUaORjGNdw5RA/exec"; //
-    let BAG_DATA = []; //
+    const BAG_JSON_URL = "https://script.google.com/macros/s/AKfycbzImYZ6K03UKU7DuziljYKDVPFQErQghW75rtCdHjgKJeY93tMVeDRAgcUaORjGNdw5RA/exec";
+    let BAG_DATA = [];
 
     // KST(hh) 추출 함수
     function hh(str) {
       // 202507130540 → 05
-      if (str && typeof str === 'string' && str.length >= 10) return str.substring(8,10); //
-      return ""; //
+      // str이 문자열인지, 길이가 충분한지 확인
+      if (typeof str === 'string' && str.length >= 10) return str.substring(8,10);
+      return "";
     }
     // 날짜 YYYYMMDD → "오늘/내일" 변환
     function dateKor(dt) {
-      // dt가 유효한 문자열이 아니면 빈 문자열 반환
-      if (typeof dt !== 'string' || dt.length !== 8) { // YYYYMMDD 형식으로 8자리 문자열인지 확인
-        return ""; //
-      }
-      const now = new Date(); //
-      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate()); //
+      // dt가 유효한 문자열이고 YYYYMMDD 형식(8자리)인지 확인
+      if (typeof dt !== 'string' || dt.length !== 8) return "";
+      const now = new Date();
+      const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
       // dt가 YYYYMMDD 형식이라고 가정
-      const dateObj = new Date(dt.substring(0,4), dt.substring(4,6)-1, dt.substring(6,8)); //
-      const diff = (dateObj - today) / (1000 * 3600 * 24); //
-      if (diff === 0) return "오늘"; //
-      if (diff === 1) return "내일"; //
+      const dateObj = new Date(dt.substring(0,4), dt.substring(4,6)-1, dt.substring(6,8));
+      const diff = (dateObj - today) / (1000 * 3600 * 24);
+      if (diff === 0) return "오늘";
+      if (diff === 1) return "내일";
       return dt; // "오늘" 또는 "내일"이 아니면 원본 dt 반환
     }
 
     // 1. 전체 API fetch
     async function loadBagDataAndRender() {
-      document.getElementById("bag-tbody").innerHTML = `<tr><td colspan="21">데이터를 불러오는 중...</td></tr>`; //
+      document.getElementById("bag-tbody").innerHTML = `<tr><td colspan="21">데이터를 불러오는 중...</td></tr>`;
       try {
-        let res = await fetch(BAG_JSON_URL + "?" + Date.now()); // 캐시 방지
-        BAG_DATA = await res.json(); //
-        renderBagTable(); //
+        let res = await fetch(BAG_JSON_URL + "?" + Date.now());
+        BAG_DATA = await res.json();
+        renderBagTable();
         // 가장 최신 updated_at 표시 (데이터가 있다면 첫 번째 행의 updated_at, 없으면 현재 시간)
-        let updated = BAG_DATA.length > 0 ? BAG_DATA[0].updated_at : new Date().toLocaleString('ko-KR', {hour12:false}); //
-        document.getElementById("updated_at").innerText = updated; //
+        let updated = BAG_DATA.length > 0 ? BAG_DATA[0].updated_at : new Date().toLocaleString('ko-KR', {hour12:false});
+        document.getElementById("updated_at").innerText = updated;
       } catch(e) {
-        console.error("데이터 로드 오류:", e); //
-        document.getElementById("bag-tbody").innerHTML = `<tr><td colspan="21">데이터 로드 오류가 발생했습니다. (콘솔 확인)</td></tr>`; //
+        console.error("데이터 로드 오류:", e); // 콘솔에 실제 오류 객체 로깅
+        document.getElementById("bag-tbody").innerHTML = `<tr><td colspan="21">데이터 로드 오류가 발생했습니다. (콘솔 확인)</td></tr>`;
       }
     }
 
     // 2. 테이블 필터+렌더링
     function renderBagTable() {
-      let tbody = document.getElementById("bag-tbody"); //
-      let f = {}; //
+      let tbody = document.getElementById("bag-tbody");
+      let f = {};
       // 모든 필터 요소의 값을 가져옵니다.
-      ["date","kal_oal","airlineCode","flightId","airportcode","op_type","scheduleDatetime","status","terminalId","fstandPosition","runway","gateNo","bagCarouselId","exitNumber"].forEach(id=>{ //
-        f[id] = document.getElementById(id).value.trim(); //
+      ["date","kal_oal","airlineCode","flightId","airportcode","op_type","scheduleDatetime","status","terminalId","fstandPosition","runway","gateNo","bagCarouselId","exitNumber"].forEach(id=>{
+        f[id] = document.getElementById(id).value.trim();
       });
 
-      let filtered = BAG_DATA.filter(row => { //
+      let filtered = BAG_DATA.filter(row => {
         // 'date' 필터링 (dateKor 함수 사용)
-        if (f.date && dateKor(row.date) !== f.date) return false; //
+        if (f.date && dateKor(row.date) !== f.date) return false;
 
         // 'scheduleDatetime'은 hh 함수를 사용하여 시간만 비교
-        if (f.scheduleDatetime && hh(row.scheduleDatetime) !== f.scheduleDatetime.padStart(2,"0")) return false; //
+        if (f.scheduleDatetime && hh(row.scheduleDatetime) !== f.scheduleDatetime.padStart(2,"0")) return false;
 
         // 나머지 필터링 (대소문자 구분 없이 부분 일치)
         // 'airportcode'와 'exitNumber'는 데이터 필드 이름이 다를 수 있으므로 OR 조건 사용
-        if (f.kal_oal && (row.kal_oal||"").toLowerCase().indexOf(f.kal_oal.toLowerCase()) === -1) return false; //
-        if (f.airlineCode && (row.airlineCode||"").toLowerCase().indexOf(f.airlineCode.toLowerCase()) === -1) return false; //
-        if (f.flightId && (row.flightId||"").toLowerCase().indexOf(f.flightId.toLowerCase()) === -1) return false; //
-        if (f.airportcode && ((row.airportcode||"").toLowerCase().indexOf(f.airportcode.toLowerCase()) === -1 && (row.airportCode||"").toLowerCase().indexOf(f.airportcode.toLowerCase()) === -1)) return false; //
-        if (f.op_type && (row.op_type||"").toLowerCase().indexOf(f.op_type.toLowerCase()) === -1) return false; //
-        if (f.status && (row.status||"").toLowerCase().indexOf(f.status.toLowerCase()) === -1) return false; //
-        if (f.terminalId && (row.terminalId||"").toLowerCase().indexOf(f.terminalId.toLowerCase()) === -1) return false; //
-        if (f.fstandPosition && (row.fstandPosition||"").toLowerCase().indexOf(f.fstandPosition.toLowerCase()) === -1) return false; //
-        if (f.runway && (row.runway||"").toLowerCase().indexOf(f.runway.toLowerCase()) === -1) return false; //
-        if (f.gateNo && (row.gateNo||"").toLowerCase().indexOf(f.gateNo.toLowerCase()) === -1) return false; //
-        if (f.bagCarouselId && (row.bagCarouselId||"").toLowerCase().indexOf(f.bagCarouselId.toLowerCase()) === -1) return false; //
-        if (f.exitNumber && ((row.exitNumber||"").toLowerCase().indexOf(f.exitNumber.toLowerCase()) === -1 && (row.exit||"").toLowerCase().indexOf(f.exitNumber.toLowerCase()) === -1)) return false; //
+        // 이 부분은 원본 index_bag.html의 로직에서 airportcode, exitNumber만 예외 처리하고 있었으므로 유지.
+        // for-of 루프를 풀어서 개별 처리하는 방식으로 명확히 함.
+        if (f.kal_oal && (row.kal_oal||"").toLowerCase().indexOf(f.kal_oal.toLowerCase()) === -1) return false;
+        if (f.airlineCode && (row.airlineCode||"").toLowerCase().indexOf(f.airlineCode.toLowerCase()) === -1) return false;
+        if (f.flightId && (row.flightId||"").toLowerCase().indexOf(f.flightId.toLowerCase()) === -1) return false;
+        if (f.airportcode && ((row.airportcode||"").toLowerCase().indexOf(f.airportcode.toLowerCase()) === -1 && (row.airportCode||"").toLowerCase().indexOf(f.airportcode.toLowerCase()) === -1)) return false;
+        if (f.op_type && (row.op_type||"").toLowerCase().indexOf(f.op_type.toLowerCase()) === -1) return false;
+        if (f.status && (row.status||"").toLowerCase().indexOf(f.status.toLowerCase()) === -1) return false;
+        if (f.terminalId && (row.terminalId||"").toLowerCase().indexOf(f.terminalId.toLowerCase()) === -1) return false;
+        if (f.fstandPosition && (row.fstandPosition||"").toLowerCase().indexOf(f.fstandPosition.toLowerCase()) === -1) return false;
+        if (f.runway && (row.runway||"").toLowerCase().indexOf(f.runway.toLowerCase()) === -1) return false;
+        if (f.gateNo && (row.gateNo||"").toLowerCase().indexOf(f.gateNo.toLowerCase()) === -1) return false;
+        if (f.bagCarouselId && (row.bagCarouselId||"").toLowerCase().indexOf(f.bagCarouselId.toLowerCase()) === -1) return false;
+        if (f.exitNumber && ((row.exitNumber||"").toLowerCase().indexOf(f.exitNumber.toLowerCase()) === -1 && (row.exit||"").toLowerCase().indexOf(f.exitNumber.toLowerCase()) === -1)) return false;
 
         return true; // 모든 필터를 통과하면 포함
       });
 
-      document.getElementById("rowCount").innerText = `총 ${filtered.length}건`; //
-      if (filtered.length === 0) { //
-        tbody.innerHTML = `<tr><td colspan="21">일치하는 데이터가 없습니다.</td></tr>`; //
-        return; //
+      document.getElementById("rowCount").innerText = `총 ${filtered.length}건`;
+      if (filtered.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="21">일치하는 데이터가 없습니다.</td></tr>`;
+        return;
       }
       tbody.innerHTML = filtered.map(row => `
         <tr>
@@ -221,22 +222,22 @@
           <td>${row.exitNumber||row.exit||""}</td> <td>${row.aircraftType||""}</td>
           <td>${row.updated_at||""}</td>
         </tr>
-      `).join(''); //
+      `).join('');
     }
 
     // 전체조회(새로고침) 버튼
-    document.getElementById("refreshBtn").onclick = function() { //
-      loadBagDataAndRender(); //
+    document.getElementById("refreshBtn").onclick = function() {
+      loadBagDataAndRender();
     };
 
     // 검색/필터 폼 제출 시
-    document.getElementById("filters").onsubmit = function(e) { //
+    document.getElementById("filters").onsubmit = function(e) {
       e.preventDefault(); // 기본 폼 제출 동작(페이지 새로고침) 방지
       renderBagTable(); // 캐시된 데이터로 테이블 렌더링
     };
 
     // 페이지 로드 시 최초 1회 데이터 로드 및 렌더링
-    loadBagDataAndRender(); //
+    loadBagDataAndRender();
   </script>
 </body>
 </html>
