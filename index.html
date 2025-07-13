@@ -56,7 +56,7 @@
         <select id="op_type"><option value="">전체</option><option value="출발">출발</option><option value="도착">도착</option></select>
       </label>
       <label>예정시
-        <input type="text" id="scheduleDatetime" size="2" placeholder="예: 08">
+        <input type="text" id="scheduleDatetimeHour" size="2" placeholder="예: 08">
       </label>
       <label>상태
         <select id="status"><option value="">전체</option><option value="정시">정시</option><option value="지연">지연</option><option value="조기">조기</option></select>
@@ -106,16 +106,18 @@
             <th>마지막수하물</th>
             <th>출구</th>
             <th>기종</th>
-            </tr>
+            <th>갱신시각</th>
+          </tr>
         </thead>
         <tbody id="bag-tbody">
-          <tr><td colspan="20">데이터를 불러오는 중...</td></tr>
+          <tr><td colspan="21">데이터를 불러오는 중...</td></tr>
         </tbody>
       </table>
     </div>
   </div>
   <script>
     // === API URL ===
+    // 기존 index.html의 SHEET_JSON_URL 대신 수하물 데이터 URL로 변경
     const BAG_JSON_URL = "https://script.google.com/macros/s/AKfycbzImYZ6K03UKU7DuziljYKDVPFQErQghW75rtCdHjgKJeY93tMVeDRAgcUaORjGNdw5RA/exec";
     let BAG_DATA = [];
 
@@ -165,7 +167,7 @@
         return timeStr;
     }
 
-    // 날짜 YYYYMMDD → "오늘/내일" 또는 원본 YYYYMMDD 반환 (테이블 표시용)
+    // 날짜 YYYYMMDD → "오늘/내일" 또는 원본 YYYYMMDD 반환 (테이블 본문 표시용)
     function dateKor(dt) {
       // dt가 유효한 문자열이고 YYYYMMDD 형식(8자리)인지 확인
       if (typeof dt !== 'string' || dt.length !== 8 || !/^\d{8}$/.test(dt)) return dt || ""; 
@@ -231,7 +233,7 @@
 
     // 1. 전체 API fetch 및 필터 옵션 초기화
     async function loadBagDataAndRender() {
-      document.getElementById("bag-tbody").innerHTML = `<tr><td colspan="20">데이터를 불러오는 중...</td></tr>`; // colspan 20으로 변경
+      document.getElementById("bag-tbody").innerHTML = `<tr><td colspan="21">데이터를 불러오는 중...</td></tr>`; 
       
       // '출발일' 필터 옵션 동적 생성
       const today = new Date();
@@ -259,11 +261,11 @@
         
         // 가장 최신 updated_at 표시 (데이터가 있다면 첫 번째 행의 updated_at을 한국 시간으로 변환, 없으면 현재 시간)
         // BAG_DATA[0]?.updated_at이 UTC일 경우 formatToKST_HHmmss를 적용
-        let updated = BAG_DATA.length > 0 ? formatToKST_HHmmss(BAG_DATA[0].updated_at) : new Date().toLocaleString('ko-KR', {hour12:false});
+        let updated = BAG_DATA.length > 0 ? formatToKST_HHmmss(BAG_DATA[0].updated_at) : new Date().toLocaleString('ko-KR', {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12:false});
         document.getElementById("updated_at").innerText = updated;
       } catch(e) {
-        console.error("데이터 로드 오류:", e); // 콘솔에 실제 오류 객체 로깅
-        document.getElementById("bag-tbody").innerHTML = `<tr><td colspan="20">데이터 로드 오류가 발생했습니다. (콘솔 확인)</td></tr>`; // colspan 20으로 변경
+        console.error("데이터 로드 오류:", e); 
+        document.getElementById("bag-tbody").innerHTML = `<tr><td colspan="21">데이터 로드 오류가 발생했습니다. (콘솔 확인)</td></tr>`;
       }
     }
 
@@ -272,7 +274,7 @@
       let tbody = document.getElementById("bag-tbody");
       let f = {};
       // 모든 필터 요소의 값을 가져옵니다.
-      ["date","kal_oal","airlineCode","flightId","airportcode","op_type","scheduleDatetime","status","terminalId","fstandPosition","runway","gateNo","bagCarouselId","exitNumber"].forEach(id=>{
+      ["date","kal_oal","airlineCode","flightId","airportcode","op_type","scheduleDatetimeHour","status","terminalId","fstandPosition","runway","gateNo","bagCarouselId","exitNumber"].forEach(id=>{
         f[id] = document.getElementById(id).value.trim();
       });
 
@@ -281,9 +283,9 @@
         if (f.date && row.date !== f.date) return false;
 
         // '예정시' 필터링은 KST 시간 (HH)만 비교
-        if (f.scheduleDatetime) {
+        if (f.scheduleDatetimeHour) {
             let scheduledHour = formatToKST_HHmm(row.scheduleDatetime).substring(0,2);
-            if (scheduledHour !== f.scheduleDatetime.padStart(2,"0")) return false;
+            if (scheduledHour !== f.scheduleDatetimeHour.padStart(2,"0")) return false;
         }
 
         // 나머지 필터링 (대소문자 구분 없이 부분 일치)
@@ -305,12 +307,12 @@
               (row.exit || "").toString().toLowerCase().indexOf(f.exitNumber.toLowerCase()) === -1 )
            ) return false;
 
-        return true; // 모든 필터를 통과하면 포함
+        return true; 
       });
 
-      document.getElementById("rowCount").innerText = `총 ${filtered.length}건`;
+      document.getElementById("rowCount").innerText = `총 ${filtered.length}건`; 
       if (filtered.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="20">일치하는 데이터가 없습니다.</td></tr>`; // 컬럼 수 20으로 변경
+        tbody.innerHTML = `<tr><td colspan="21">일치하는 데이터가 없습니다.</td></tr>`; // 컬럼 수 21으로 변경
         return;
       }
       tbody.innerHTML = filtered.map(row => `
@@ -335,7 +337,8 @@
           <td>${formatToKST_HHmm(row.bagLastTime)||""}</td>
           <td>${row.exitNumber||row.exit||""}</td>
           <td>${row.aircraftType||""}</td>
-          </tr>
+          <td>${formatToKST_HHmmss(row.updated_at)||""}</td>
+        </tr>
       `).join('');
     }
 
@@ -346,8 +349,8 @@
 
     // 검색/필터 폼 제출 시
     document.getElementById("filters").onsubmit = function(e) {
-      e.preventDefault(); // 기본 폼 제출 동작(페이지 새로고침) 방지
-      renderBagTable(); // 캐시된 데이터로 테이블 렌더링
+      e.preventDefault(); 
+      renderBagTable(); 
     };
 
     // 페이지 로드 시 최초 1회 데이터 로드 및 렌더링
