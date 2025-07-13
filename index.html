@@ -190,7 +190,6 @@
         document.getElementById("updated_at").innerText = currentKST + " (오류 발생)";
       }
     }
-    // 오늘, 내일만 필터 (통합적으로)
     function renderBagTable(todayFormatted, tomorrowFormatted) {
       let tbody = document.getElementById("bag-tbody");
       let f = {};
@@ -199,7 +198,7 @@
       });
       let filtered = BAG_DATA.filter(row => {
         let rowDate = row.date ? row.date.toString() : "";
-        // 오늘/내일(20250714/20250715)만 통합적으로 표시
+        // 오늘/내일(YYYYMMDD)만 표시(그 외는 아예 제외!)
         if (!(rowDate === todayFormatted || rowDate === tomorrowFormatted)) return false;
         if (f.scheduleDatetimeHour) {
           let scheduled = row.scheduleDatetime ? row.scheduleDatetime.toString() : "";
@@ -221,7 +220,6 @@
            ) return false;
         return true; 
       });
-
       document.getElementById("rowCount").innerText = `총 ${filtered.length}건`; 
       if (filtered.length === 0) {
         tbody.innerHTML = `<tr><td colspan="20">일치하는 데이터가 없습니다.</td></tr>`;
@@ -257,7 +255,6 @@
     };
     document.getElementById("filters").onsubmit = function(e) {
       e.preventDefault(); 
-      // 오늘/내일 기준값을 넘겨줘야 함
       const today = new Date();
       const tomorrow = new Date(today);
       tomorrow.setDate(today.getDate() + 1);
