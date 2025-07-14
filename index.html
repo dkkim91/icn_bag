@@ -158,22 +158,31 @@
       return str.length >= 4 ? str.slice(-4) : str;
     }
     // KST로 변환 함수
-   function toKSTString(dtstr) {
-     if (!dtstr) return "";
-     // ISO 포맷(UTC) → 한국시간 변환
-     if (dtstr.includes("T") && dtstr.endsWith("Z")) {
-       const date = new Date(dtstr);
-       if (!isNaN(date.getTime())) {
-         // 브라우저가 UTC 인식 → 한국시간으로 변환해서 문자열 출력
-         return date.toLocaleString("sv-SE", { timeZone: "Asia/Seoul" }).replace("T", " ").replace(/\.\d+/, "");
-       }
-     }
-     // yyyy-MM-dd HH:mm:ss 형태면 그대로
-     if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dtstr)) {
-       return dtstr;
-     }
-     return dtstr;
-   }
+function toKSTString(dtstr) {
+  if (!dtstr) return "";
+  // ISO 포맷(2025-07-14T03:37:23.000Z)만 변환
+  if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/.test(dtstr)) {
+    // UTC → KST 변환
+    const date = new Date(dtstr);
+    if (!isNaN(date.getTime())) {
+      // yyyy-MM-dd HH:mm:ss 포맷으로 변환
+      const yyyy = date.getFullYear();
+      const MM = String(date.getMonth() + 1).padStart(2, '0');
+      const dd = String(date.getDate()).padStart(2, '0');
+      const HH = String((date.getHours() + 9) % 24).padStart(2, '0'); // +9시간만 한 번
+      const mm = String(date.getMinutes()).padStart(2, '0');
+      const ss = String(date.getSeconds()).padStart(2, '0');
+      return `${yyyy}-${MM}-${dd} ${HH}:${mm}:${ss}`;
+    }
+  }
+  // yyyy-MM-dd HH:mm:ss 이미 변환되어 있으면 그대로
+  if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dtstr)) {
+    return dtstr;
+  }
+  // 기타 포맷은 원문 그대로
+  return dtstr;
+}
+
 
 
     async function loadBagDataAndRender() {
