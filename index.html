@@ -326,12 +326,20 @@
 
     // scheduleDatetime에서 시간(HH)을 추출하는 헬퍼 함수
     function getHourFromScheduleDatetime(scheduleDatetime) {
-      if (!scheduleDatetime || typeof scheduleDatetime !== 'string' || scheduleDatetime.length < 10) {
+      console.log(`[getHourFromScheduleDatetime] Input scheduleDatetime type: ${typeof scheduleDatetime}, value: '${scheduleDatetime}'`);
+      if (!scheduleDatetime) {
+        console.log("[getHourFromScheduleDatetime] scheduleDatetime is null or empty.");
         return null;
       }
-      // YYYYMMDDHHMMSS 형식에서 HH 추출 (인덱스 8부터 2자리)
-      const hourStr = scheduleDatetime.substring(8, 10);
+      let dtStr = String(scheduleDatetime); // Ensure it's a string
+      if (dtStr.length < 10) { // YYYYMMDDHHMMSS or YYYYMMDDHHMM
+        console.log(`[getHourFromScheduleDatetime] scheduleDatetime string too short: ${dtStr.length}. Value: '${dtStr}'`);
+        return null;
+      }
+      // YYYYMMDDHHMMSS 또는 YYYYMMDDHHMM 형식에서 HH 추출 (인덱스 8부터 2자리)
+      const hourStr = dtStr.substring(8, 10);
       const hour = parseInt(hourStr, 10);
+      console.log(`[getHourFromScheduleDatetime] Extracted hourStr: '${hourStr}', Parsed hour: ${hour}`);
       return isNaN(hour) ? null : hour;
     }
 
@@ -460,7 +468,7 @@
           const scheduledHour = getHourFromScheduleDatetime(row.scheduleDatetime);
           const filterHourStr = f.opsHourFilter; // 콤보박스 값은 이미 HH 형태의 문자열
           
-          console.log(`Filtering row: scheduleDatetime='${row.scheduleDatetime}', extractedHour=${scheduledHour}, filterHour='${filterHourStr}'`); // 디버깅 로그
+          console.log(`[renderBagTable] Filtering row: scheduleDatetime='${row.scheduleDatetime}', extractedHour=${scheduledHour}, filterHour='${filterHourStr}'`); // 디버깅 로그
 
           if (scheduledHour === null || String(scheduledHour).padStart(2, '0') !== filterHourStr) {
             return false;
