@@ -327,19 +327,24 @@
     // scheduleDatetime에서 시간(HH)을 추출하는 헬퍼 함수
     function getHourFromScheduleDatetime(scheduleDatetime) {
       console.log(`[getHourFromScheduleDatetime] Input scheduleDatetime type: ${typeof scheduleDatetime}, value: '${scheduleDatetime}'`);
-      if (!scheduleDatetime) {
-        console.log("[getHourFromScheduleDatetime] scheduleDatetime is null or empty.");
+      
+      if (typeof scheduleDatetime !== 'string' || !scheduleDatetime) {
+        console.log("[getHourFromScheduleDatetime] scheduleDatetime is not a string or is empty/null.");
         return null;
       }
-      let dtStr = String(scheduleDatetime); // Ensure it's a string
-      if (dtStr.length < 10) { // YYYYMMDDHHMMSS or YYYYMMDDHHMM
-        console.log(`[getHourFromScheduleDatetime] scheduleDatetime string too short: ${dtStr.length}. Value: '${dtStr}'`);
+      
+      let dtStr = scheduleDatetime.trim(); // Trim whitespace just in case
+      if (dtStr.length < 10) { // YYYYMMDDHHMM or YYYYMMDDHHMMSS
+        console.log(`[getHourFromScheduleDatetime] scheduleDatetime string too short (${dtStr.length}). Value: '${dtStr}'`);
         return null;
       }
-      // YYYYMMDDHHMMSS 또는 YYYYMMDDHHMM 형식에서 HH 추출 (인덱스 8부터 2자리)
+      
+      // Attempt to extract hour string
       const hourStr = dtStr.substring(8, 10);
       const hour = parseInt(hourStr, 10);
-      console.log(`[getHourFromScheduleDatetime] Extracted hourStr: '${hourStr}', Parsed hour: ${hour}`);
+      
+      console.log(`[getHourFromScheduleDatetime] Extracted hourStr: '${hourStr}', Parsed hour: ${hour}, isNaN(hour): ${isNaN(hour)}`);
+      
       return isNaN(hour) ? null : hour;
     }
 
@@ -356,8 +361,9 @@
         let res = await fetch(BAG_JSON_URL + "?" + Date.now());
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         let raw = await res.json();
+        console.log("Raw data received from API:", raw); // Log the entire raw data
         BAG_DATA = Array.isArray(raw) ? raw : (raw.data || []);
-        console.log("Raw BAG_DATA loaded. Sample scheduleDatetime values:");
+        console.log("Processed BAG_DATA. Sample scheduleDatetime values:");
         BAG_DATA.slice(0, 5).forEach((row, index) => {
           console.log(`  Row ${index}: scheduleDatetime='${row.scheduleDatetime}', extractedHour=${getHourFromScheduleDatetime(row.scheduleDatetime)}`);
         });
