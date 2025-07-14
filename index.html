@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>인천공항 수하물 출도착 스케줄(오늘/내일)</title>
+  <title>인천공항 수하물 스케줄(오늘/내일)</title>
   <style>
     body { font-family: 'Malgun Gothic', Arial, sans-serif; margin: 0; background: #f9f9f9; }
     .container { max-width: 1100px; margin: 12px auto; background: #fff; border-radius: 14px; box-shadow: 0 2px 14px #ccc; padding: 16px; }
@@ -34,16 +34,25 @@
       width: 100%; 
       box-sizing: border-box; 
     }
+    .filters .btn-group { /* 버튼들을 위한 새로운 컨테이너 */
+      grid-column: span 2; /* 두 칸을 차지하도록 */
+      display: flex;
+      justify-content: center;
+      gap: 10px; /* 버튼들 사이 간격 */
+      margin-top: 5px;
+    }
     .filters .btn { 
       background:#2563eb; 
       color:#fff; 
       border:none; 
-      padding:4px 14px; 
+      padding:6px 12px; /* 검색 버튼 크기 줄임 */
       border-radius:6px; 
       cursor:pointer;
-      grid-column: span 2; 
-      width: auto; 
-      margin-top: 5px; 
+      flex-grow: 1; /* 버튼이 공간을 채우도록 */
+      max-width: 120px; /* 최대 너비 설정 */
+    }
+    .filters .btn.reset { /* 초기화 버튼 스타일 */
+      background:#6c757d; /* 회색 계열 */
     }
     table { width:100%; border-collapse:collapse; margin-top: 6px; }
     th,td { padding:4px 2px; border-bottom:1px solid #e2e2e2; font-size:0.96em; text-align:center;}
@@ -75,9 +84,14 @@
       .filters #flightId, .filters #airportcode { 
         max-width: 100px; 
       }
+      .filters .btn-group {
+        grid-column: span 2; /* 버튼 그룹이 두 칸을 차지하도록 */
+        width: 100%; /* 전체 너비 사용 */
+        justify-content: space-around; /* 버튼들이 균등하게 분배되도록 */
+      }
       .filters .btn {
-        grid-column: span 2; 
-        width: 100%; 
+        max-width: 100px; /* 모바일에서 버튼 최대 너비 */
+        padding: 6px 10px; /* 모바일에서 버튼 패딩 조정 */
       }
       /* 테이블 스크롤바가 항상 보이도록 설정 */
       div[style="overflow-x:auto;"] {
@@ -106,7 +120,7 @@
 </head>
 <body>
   <div class="container">
-    <h2>인천공항 수하물 출도착 스케줄(오늘/내일)</h2>
+    <h2>인천공항 수하물 스케줄(오늘/내일)</h2>
     <div class="info" id="info-date">
       데이터 갱신시각: <span id="updated_at"></span>
       <button id="refreshBtn" title="API에서 최신 정보 새로고침">⟳ 전체조회</button>
@@ -118,7 +132,7 @@
       <label>KAL/OAL
         <select id="kal_oal"><option value="">전체</option><option value="KAL">KAL</option><option value="OAL">OAL</option></select>
       </label>
-      <label class="two-line">항공사<br>코드
+      <label class="two-line">항공사
         <input type="text" id="airlineCode" placeholder="예: KE">
       </label>
       <label>편명
@@ -131,9 +145,9 @@
         <select id="op_type"><option value="">전체</option><option value="출발">출발</option><option value="도착">도착</option></select>
       </label>
       <label>시간대
-        <select id="opsHourFilter">
+        <select id="opsHourFilter"> <!-- 시간대 필터 콤보박스 -->
           <option value="">전체</option>
-          <!-- 시간대 옵션은 JavaScript에서 동적으로 추가됩니다 -->
+          <!-- 옵션은 JS에서 동적으로 추가 -->
         </select>
       </label>
       <label>상태
@@ -145,25 +159,39 @@
         </select>
       </label>
       <label>스탠드
-        <input type="text" id="fstandPosition" size="2">
+        <select id="fstandPosition"> 
+          <option value="">전체</option>
+          <!-- 옵션은 JS에서 동적으로 추가 -->
+        </select>
       </label>
       <label>활주로
-        <input type="text" id="runway" size="2">
+        <select id="runway"> 
+          <option value="">전체</option>
+          <!-- 옵션은 JS에서 동적으로 추가 -->
+        </select>
       </label>
       <label>게이트
-        <input type="text" id="gateNo" size="2">
+        <select id="gateNo"> 
+          <option value="">전체</option>
+          <!-- 옵션은 JS에서 동적으로 추가 -->
+        </select>
       </label>
       <label>벨트
-        <select id="bagCarouselId"> <!-- 벨트 콤보박스 -->
+        <select id="bagCarouselId"> 
           <option value="">전체</option>
+          <!-- 옵션은 JS에서 동적으로 추가 -->
         </select>
       </label>
       <label>출구
-        <select id="exitNumber"> <!-- 출구 콤보박스 -->
+        <select id="exitNumber"> 
           <option value="">전체</option>
+          <!-- 옵션은 JS에서 동적으로 추가 -->
         </select>
       </label>
-      <button class="btn" type="submit">검색</button>
+      <div class="btn-group">
+        <button class="btn" type="submit">검색</button>
+        <button class="btn reset" type="button" id="resetBtn">초기화</button>
+      </div>
     </form>
     <div id="rowCount"></div>
     <div style="overflow-x:auto;">
@@ -172,7 +200,7 @@
           <tr>
             <th>출발일</th>
             <th class="two-line">KAL/<br>OAL</th>
-            <th class="two-line">항공사<br>코드</th> <!-- 항공사코드 헤더 2줄로 변경 -->
+            <th class="two-line">항공사<br>코드</th> 
             <th class="two-line">편명</th>
             <th>공항코드</th>
             <th>출도착</th>
@@ -297,6 +325,17 @@
       return dtstr;
     }
 
+    // scheduleDatetime에서 시간(HH)을 추출하는 헬퍼 함수
+    function getHourFromScheduleDatetime(scheduleDatetime) {
+      if (!scheduleDatetime || typeof scheduleDatetime !== 'string' || scheduleDatetime.length < 10) {
+        return null;
+      }
+      // YYYYMMDDHHMMSS 형식에서 HH 추출 (인덱스 8부터 2자리)
+      const hourStr = scheduleDatetime.substring(8, 10);
+      const hour = parseInt(hourStr, 10);
+      return isNaN(hour) ? null : hour;
+    }
+
 
     async function loadBagDataAndRender() {
       document.getElementById("bag-tbody").innerHTML = `<tr><td colspan="20">데이터를 불러오는 중...</td></tr>`; 
@@ -323,32 +362,60 @@
         
         // 터미널 옵션 동적생성
         let terminalSelect = document.getElementById("terminalId");
-        let terminals = [...new Set(BAG_DATA.map(row => row.terminalId).filter(t => t))].sort();
+        let terminals = [...new Set(BAG_DATA.map(row => row.terminalId).filter(t => t !== undefined && t !== null && t !== ''))].sort();
         terminalSelect.innerHTML = `<option value="">전체</option>` + 
                                    terminals.map(t => `<option value="${t}">${t}</option>`).join('');
         terminalSelect.value = "";
 
-        // 시간대 옵션 동적생성
+        // 시간대 옵션 동적생성 (scheduleDatetime에서 추출)
         let opsHourSelect = document.getElementById("opsHourFilter");
-        let opsHours = [...new Set(BAG_DATA.map(row => row.ops_hour).filter(h => h !== undefined && h !== null))].sort((a,b) => a-b);
+        let uniqueHours = new Set();
+        BAG_DATA.forEach(row => {
+          const hour = getHourFromScheduleDatetime(row.scheduleDatetime);
+          if (hour !== null) {
+            uniqueHours.add(hour);
+          }
+        });
+        let sortedOpsHours = Array.from(uniqueHours).sort((a,b) => a-b);
         opsHourSelect.innerHTML = `<option value="">전체</option>` + 
-                                  opsHours.map(h => {
+                                  sortedOpsHours.map(h => {
                                     const hourStr = String(h).padStart(2, '0');
-                                    const nextHourStr = String((h + 1) % 24).padStart(2, '0');
-                                    return `<option value="${h}">${hourStr}시-${nextHourStr}시</option>`;
+                                    return `<option value="${hourStr}">${hourStr}시</option>`; // HH시 형태로 표시
                                   }).join('');
         opsHourSelect.value = "";
+        // console.log("Generated Ops Hour Options:", sortedOpsHours); // 디버깅 로그
+
+        // 스탠드 옵션 동적생성
+        let fstandPositionSelect = document.getElementById("fstandPosition");
+        let fstandPositions = [...new Set(BAG_DATA.map(row => row.fstandPosition).filter(s => s !== undefined && s !== null && s !== ''))].sort();
+        fstandPositionSelect.innerHTML = `<option value="">전체</option>` + 
+                                         fstandPositions.map(s => `<option value="${s}">${s}</option>`).join('');
+        fstandPositionSelect.value = "";
+
+        // 활주로 옵션 동적생성
+        let runwaySelect = document.getElementById("runway");
+        let runways = [...new Set(BAG_DATA.map(row => row.runway).filter(r => r !== undefined && r !== null && r !== ''))].sort();
+        runwaySelect.innerHTML = `<option value="">전체</option>` + 
+                                 runways.map(r => `<option value="${r}">${r}</option>`).join('');
+        runwaySelect.value = "";
+
+        // 게이트 옵션 동적생성
+        let gateNoSelect = document.getElementById("gateNo");
+        let gateNos = [...new Set(BAG_DATA.map(row => row.gateNo).filter(g => g !== undefined && g !== null && g !== ''))].sort((a,b) => String(a).localeCompare(String(b))); // 문자열로 비교하여 정렬
+        gateNoSelect.innerHTML = `<option value="">전체</option>` + 
+                                 gateNos.map(g => `<option value="${g}">${g}</option>`).join('');
+        gateNoSelect.value = "";
 
         // 벨트 옵션 동적생성
         let bagCarouselIdSelect = document.getElementById("bagCarouselId");
-        let bagCarousels = [...new Set(BAG_DATA.map(row => row.bagCarouselId).filter(b => b !== undefined && b !== null && b !== ''))].sort((a,b) => a-b);
+        let bagCarousels = [...new Set(BAG_DATA.map(row => row.bagCarouselId).filter(b => b !== undefined && b !== null && b !== ''))].sort((a,b) => String(a).localeCompare(String(b))); // 문자열로 비교하여 정렬
         bagCarouselIdSelect.innerHTML = `<option value="">전체</option>` + 
                                         bagCarousels.map(b => `<option value="${b}">${b}</option>`).join('');
         bagCarouselIdSelect.value = "";
 
         // 출구 옵션 동적생성
         let exitNumberSelect = document.getElementById("exitNumber");
-        let exitNumbers = [...new Set(BAG_DATA.map(row => (row.exitNumber || row.exit)).filter(e => e !== undefined && e !== null && e !== ''))].sort();
+        let exitNumbers = [...new Set(BAG_DATA.map(row => (row.exitNumber || row.exit)).filter(e => e !== undefined && e !== null && e !== ''))].sort((a,b) => String(a).localeCompare(String(b))); // 문자열로 비교하여 정렬
         exitNumberSelect.innerHTML = `<option value="">전체</option>` + 
                                      exitNumbers.map(e => `<option value="${e}">${e}</option>`).join('');
         exitNumberSelect.value = "";
@@ -387,32 +454,38 @@
         // date 필터(전체: 빈값)이 아니면, 필터값만 표시
         if (f.dateSelect && rowDate !== f.dateSelect) return false;
         
-        // 시간대 필터링 로직 (ops_hour)
-        if (f.opsHourFilter && row.ops_hour != parseInt(f.opsHourFilter)) return false;
-
-        const commonFilters = ["kal_oal", "airlineCode", "flightId", "op_type", "status", 
-                               "terminalId", "fstandPosition", "runway", "gateNo"];
-        for (let k of commonFilters) {
-          // 콤보박스 값은 정확히 일치해야 함. 텍스트 입력 필드는 indexOf 사용.
-          if (k === "terminalId") { // 터미널은 콤보박스이므로 정확히 일치
-            if (f[k] && row[k] != f[k]) return false;
-          } else if (k === "airlineCode" || k === "flightId" || k === "fstandPosition" || k === "runway" || k === "gateNo") {
-            if (f[k] && (row[k] || "").toString().toLowerCase().indexOf(f[k].toLowerCase()) === -1) return false;
-          } else { // kal_oal, op_type, status 등 콤보박스는 정확히 일치
-            if (f[k] && row[k] != f[k]) return false;
+        // 콤보박스 필터링 (정확히 일치)
+        const comboFilters = ["kal_oal", "op_type", "status", "terminalId", "fstandPosition", "runway", "gateNo", "bagCarouselId"];
+        for (let k of comboFilters) {
+          if (f[k]) {
+            let rowValue = (row[k] || "").toString();
+            if (rowValue !== f[k]) return false;
           }
         }
+
+        // 시간대 필터링 로직 (opsHourFilter) - 콤보박스
+        if (f.opsHourFilter) {
+          const scheduledHour = getHourFromScheduleDatetime(row.scheduleDatetime);
+          const filterHourStr = f.opsHourFilter; // 콤보박스 값은 이미 HH 형태의 문자열
+          
+          // console.log(`Filtering: row.scheduleDatetime=${row.scheduleDatetime}, scheduledHour=${scheduledHour}, filterHourStr=${filterHourStr}`); // 디버깅 로그
+
+          if (scheduledHour === null || String(scheduledHour).padStart(2, '0') !== filterHourStr) {
+            return false;
+          }
+        }
+
+        // 텍스트 입력 필드는 대소문자 구분 없이 indexOf 사용.
+        if (f.airlineCode && (!row.airlineCode || row.airlineCode.toLowerCase().indexOf(f.airlineCode.toLowerCase()) === -1)) return false;
+        if (f.flightId && (!row.flightId || row.flightId.toLowerCase().indexOf(f.flightId.toLowerCase()) === -1)) return false;
         
-        // 공항코드 필터링
+        // 공항코드 필터링 (airportcode 또는 airportCode 필드 모두 확인)
         if (f.airportcode && 
-            ( (row.airportcode || "").toString().toLowerCase().indexOf(f.airportcode.toLowerCase()) === -1 && 
-              (row.airportCode || "").toString().toLowerCase().indexOf(f.airportcode.toLowerCase()) === -1 )
+            ( !(row.airportcode && row.airportcode.toLowerCase().indexOf(f.airportcode.toLowerCase()) !== -1) && 
+              !(row.airportCode && row.airportCode.toLowerCase().indexOf(f.airportcode.toLowerCase()) !== -1) )
            ) return false;
         
-        // 벨트 필터링 (콤보박스)
-        if (f.bagCarouselId && (row.bagCarouselId || "").toString() !== f.bagCarouselId) return false;
-
-        // 출구 필터링 (콤보박스)
+        // 출구 필터링 (exitNumber 또는 exit 필드 모두 확인, 콤보박스이므로 정확히 일치)
         if (f.exitNumber && ((row.exitNumber || row.exit) || "").toString() !== f.exitNumber) return false;
 
         return true; 
@@ -427,7 +500,7 @@
         <tr>
           <td>${dateKor(row.date)||""}</td>
           <td class="two-line">${row.kal_oal||""}</td>
-          <td>${row.airlineCode||""}</td>
+          <td class="two-line">${row.airlineCode||""}</td>
           <td class="two-line">${row.flightId ? row.flightId.slice(0,2) + '<br>' + row.flightId.slice(2) : ""}</td>
           <td>${row.airportcode||row.airportCode||""}</td>
           <td>${row.op_type||""}</td>
@@ -441,8 +514,8 @@
           <td>${row.runway||""}</td>
           <td>${row.gateNo||""}</td>
           <td>${row.bagCarouselId||""}</td>
-          <td>${toHHMMString(row.bagFirstTime)||""}</td>
-          <td>${toHHMMString(row.bagLastTime)||""}</td>
+          <td>${row.bagFirstTime ? toHHMMString(row.bagFirstTime) : ""}</td>
+          <td>${row.bagLastTime ? toHHMMString(row.bagLastTime) : ""}</td>
           <td>${row.exitNumber||row.exit||""}</td>
           <td>${row.aircraftType||""}</td>
         </tr>
@@ -458,6 +531,20 @@
         document.getElementById("dateSelect").options[1].value,
         document.getElementById("dateSelect").options[2].value
       );
+    };
+
+    // 초기화 버튼 클릭 이벤트 리스너 추가
+    document.getElementById("resetBtn").onclick = function() {
+      // 모든 select 박스 초기화
+      document.querySelectorAll('.filters select').forEach(select => {
+        select.value = "";
+      });
+      // 모든 input 텍스트 필드 초기화
+      document.querySelectorAll('.filters input[type="text"]').forEach(input => {
+        input.value = "";
+      });
+      // 데이터 다시 로드 및 렌더링 (필터 초기화 후 전체 데이터 표시)
+      loadBagDataAndRender();
     };
 
     window.onload = function() {
