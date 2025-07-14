@@ -157,6 +157,29 @@
       str = str.toString();
       return str.length >= 4 ? str.slice(-4) : str;
     }
+    // KST로 변환 함수
+    function toKSTString(dtstr) {
+      if (!dtstr) return "";
+      // ISO 8601(Z, T 포함)일 때만 변환
+      if (dtstr.includes("T") && dtstr.endsWith("Z")) {
+        const date = new Date(dtstr);
+        if (!isNaN(date.getTime())) {
+          date.setHours(date.getHours() + 9); // KST 변환
+          const yyyy = date.getFullYear();
+          const MM = String(date.getMonth() + 1).padStart(2, '0');
+          const dd = String(date.getDate()).padStart(2, '0');
+          const HH = String(date.getHours()).padStart(2, '0');
+          const mm = String(date.getMinutes()).padStart(2, '0');
+          const ss = String(date.getSeconds()).padStart(2, '0');
+          return `${yyyy}-${MM}-${dd} ${HH}:${mm}:${ss}`;
+        }
+      }
+      // 이미 yyyy-MM-dd HH:mm:ss면 그대로
+      if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dtstr)) {
+        return dtstr;
+      }
+      return dtstr;
+    }
 
     async function loadBagDataAndRender() {
       document.getElementById("bag-tbody").innerHTML = `<tr><td colspan="20">데이터를 불러오는 중...</td></tr>`; 
@@ -182,7 +205,7 @@
         BAG_DATA = Array.isArray(raw) ? raw : (raw.data || []);
         renderBagTable(todayFormatted, tomorrowFormatted);
 
-        // updated_at 컬럼에서 가장 최근값만 그대로 표시 (포맷 변환 없음)
+        // updated_at 컬럼에서 가장 최근값만 그대로 표시, KST 변환 포함
         let latestUpdatedAt = "";
         if (BAG_DATA.length > 0) {
           let sorted = BAG_DATA
@@ -190,7 +213,7 @@
             .sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1));
           latestUpdatedAt = sorted.length > 0 ? sorted[0].updated_at : "";
         }
-        document.getElementById("updated_at").innerText = latestUpdatedAt || "-";
+        document.getElementById("updated_at").innerText = toKSTString(latestUpdatedAt) || "-";
       } catch(e) {
         console.error("데이터 로드 오류:", e); 
         document.getElementById("bag-tbody").innerHTML = `<tr><td colspan="20">데이터 로드 오류가 발생했습니다. (콘솔 확인)</td></tr>`;
