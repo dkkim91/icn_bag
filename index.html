@@ -9,7 +9,6 @@
     .container { max-width: 1100px; margin: 12px auto; background: #fff; border-radius: 14px; box-shadow: 0 2px 14px #ccc; padding: 16px; }
     h2 { text-align: center; margin-bottom: 8px; color: #2563eb; letter-spacing:-1px;}
     .info { text-align: center; font-size: 0.97em; color: #444; margin-bottom: 8px; }
-    /* 필터 섹션 스타일 */
     .filters { 
       display: grid; 
       grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); 
@@ -34,25 +33,25 @@
       width: 100%; 
       box-sizing: border-box; 
     }
-    .filters .btn-group { /* 버튼들을 위한 새로운 컨테이너 */
-      grid-column: span 2; /* 두 칸을 차지하도록 */
+    .filters .btn-group {
+      grid-column: span 2;
       display: flex;
       justify-content: center;
-      gap: 10px; /* 버튼들 사이 간격 */
+      gap: 10px;
       margin-top: 5px;
     }
     .filters .btn { 
       background:#2563eb; 
       color:#fff; 
       border:none; 
-      padding:6px 12px; /* 검색 버튼 크기 줄임 */
+      padding:6px 12px;
       border-radius:6px; 
       cursor:pointer;
-      flex-grow: 1; /* 버튼이 공간을 채우도록 */
-      max-width: 120px; /* 최대 너비 설정 */
+      flex-grow: 1;
+      max-width: 120px;
     }
-    .filters .btn.reset { /* 초기화 버튼 스타일 */
-      background:#6c757d; /* 회색 계열 */
+    .filters .btn.reset {
+      background:#6c757d;
     }
     table { width:100%; border-collapse:collapse; margin-top: 6px; }
     th,td { padding:4px 2px; border-bottom:1px solid #e2e2e2; font-size:0.96em; text-align:center;}
@@ -60,19 +59,24 @@
     tr:nth-child(even) { background:#fafbff; }
     #rowCount { font-weight:bold; margin:10px 0 0 2px; text-align:right;}
     #refreshBtn { margin-left:10px; background:#e1e8ff; color:#222; border:1px solid #7ca5ea; border-radius:6px; padding:3px 9px; cursor:pointer; }
-    
-    /* 두 줄 표시를 위한 스타일 */
     .two-line {
       white-space: normal; 
       line-height: 1.2; 
     }
 
-    /* 모바일 최적화 */
+    /* === 변경: 편명, 공항코드 input 크기 2배 확장 === */
+    .filters input#flightId,
+    .filters input#airportcode {
+      font-size: 1.1em;
+      min-width: 150px;
+      max-width: 220px;
+      padding: 7px 14px;
+    }
+
     @media (max-width:900px) {
       .container { padding:5px;}
       table, thead, tbody, th, td, tr { font-size:0.85em; } 
       #rowCount { text-align:center; margin-top: 5px; } 
-      
       .filters { 
         grid-template-columns: 1fr 1fr; 
         gap: 8px; 
@@ -85,15 +89,14 @@
         max-width: 100px; 
       }
       .filters .btn-group {
-        grid-column: span 2; /* 버튼 그룹이 두 칸을 차지하도록 */
-        width: 100%; /* 전체 너비 사용 */
-        justify-content: space-around; /* 버튼들이 균등하게 분배되도록 */
+        grid-column: span 2;
+        width: 100%;
+        justify-content: space-around;
       }
       .filters .btn {
-        max-width: 100px; /* 모바일에서 버튼 최대 너비 */
-        padding: 6px 10px; /* 모바일에서 버튼 패딩 조정 */
+        max-width: 100px;
+        padding: 6px 10px;
       }
-      /* 테이블 스크롤바가 항상 보이도록 설정 */
       div[style="overflow-x:auto;"] {
         -webkit-overflow-scrolling: touch; 
       }
@@ -102,19 +105,17 @@
         font-size: 0.8em; 
       }
     }
-
-    /* 더 작은 모바일 기기 (예: 480px 이하) */
     @media (max-width:480px) {
-        .filters label {
-            width: auto; 
-        }
-        .filters #flightId, .filters #airportcode {
-            max-width: 70px; 
-        }
-        th, td {
-            font-size: 0.75em; 
-            padding: 2px 0px; 
-        }
+      .filters label {
+        width: auto; 
+      }
+      .filters #flightId, .filters #airportcode {
+        max-width: 70px; 
+      }
+      th, td {
+        font-size: 0.75em; 
+        padding: 2px 0px; 
+      }
     }
   </style>
 </head>
@@ -127,7 +128,6 @@
       <button id="refreshBtn" title="API에서 최신 정보 새로고침">⟳ 전체조회</button>
     </div>
     <form class="filters" id="filters">
-      <!-- 출발일 필터 제거 -->
       <label>KAL/OAL
         <select id="kal_oal"><option value="">전체</option><option value="KAL">KAL</option><option value="OAL">OAL</option></select>
       </label>
@@ -144,10 +144,7 @@
         <select id="op_type"><option value="">전체</option><option value="출발">출발</option><option value="도착">도착</option></select>
       </label>
       <label>시간대
-        <select id="opsHourFilter"> <!-- 시간대 필터 콤보박스 -->
-          <option value="">전체</option>
-          <!-- 옵션은 JS에서 동적으로 추가 -->
-        </select>
+        <select id="opsHourFilter"></select>
       </label>
       <label>상태
         <select id="status"><option value="">전체</option><option value="정시">정시</option><option value="지연">지연</option><option value="조기">조기</option></select>
@@ -158,33 +155,28 @@
         </select>
       </label>
       <label>스탠드
-        <select id="fstandPosition"> 
+        <select id="fstandPosition">
           <option value="">전체</option>
-          <!-- 옵션은 JS에서 동적으로 추가 -->
         </select>
       </label>
       <label>활주로
-        <select id="runway"> 
+        <select id="runway">
           <option value="">전체</option>
-          <!-- 옵션은 JS에서 동적으로 추가 -->
         </select>
       </label>
       <label>게이트
-        <select id="gateNo"> 
+        <select id="gateNo">
           <option value="">전체</option>
-          <!-- 옵션은 JS에서 동적으로 추가 -->
         </select>
       </label>
       <label>벨트
-        <select id="bagCarouselId"> 
+        <select id="bagCarouselId">
           <option value="">전체</option>
-          <!-- 옵션은 JS에서 동적으로 추가 -->
         </select>
       </label>
       <label>출구
-        <select id="exitNumber"> 
+        <select id="exitNumber">
           <option value="">전체</option>
-          <!-- 옵션은 JS에서 동적으로 추가 -->
         </select>
       </label>
       <div class="btn-group">
@@ -197,16 +189,13 @@
       <table id="bag-table">
         <thead>
           <tr>
-            <!-- <th>출발일</th> 제거 -->
             <th class="two-line">KAL/<br>OAL</th>
-            <!-- <th class="two-line">항공사<br>코드</th> 제거 --> 
             <th class="two-line">편명</th>
             <th>공항코드</th>
             <th>출도착</th>
             <th>예정시</th>
             <th>실제시</th>
             <th>착륙시</th>
-            <!-- <th>차이</th> 제거 -->
             <th>상태</th>
             <th>터미널</th>
             <th>스탠드</th>
@@ -235,15 +224,12 @@
       const day = String(date.getDate()).padStart(2, '0');
       return `${year}${month}${day}`;
     }
-    
-    // 출발일 MMDD 형식으로 표시
     function dateKor(dt) {
       if (!dt) return ""; 
       dt = dt.toString();
       if (dt.length !== 8 || !/^\d{8}$/.test(dt)) return dt; 
       return `${dt.slice(4,6)}/${dt.slice(6,8)}`;
     }
-
     function formatDifferenceTime(diffStr) {
       if (!diffStr) return "";
       if (typeof diffStr !== 'string') diffStr = diffStr.toString();
@@ -268,13 +254,9 @@
       if (/^[+-]\d{2}:\d{2}$/.test(diffStr)) return diffStr;
       return diffStr; 
     }
-    
-    // HH:mm 형식으로 변환 (예정시, 실제시, 착륙시, 첫수하물, 마지막수하물)
     function toHHMMString(dtstr) {
       if (!dtstr) return "";
       let dateObj;
-
-      // 숫자로 된 시간 (예: 202507140040) 처리
       if (typeof dtstr === 'number' || (typeof dtstr === 'string' && /^\d{12}$/.test(dtstr))) {
         const year = parseInt(String(dtstr).substring(0, 4));
         const month = parseInt(String(dtstr).substring(4, 6)) - 1;
@@ -283,7 +265,6 @@
         const minute = parseInt(String(dtstr).substring(10, 12));
         dateObj = new Date(year, month, day, hour, minute);
       } else {
-        // ISO 8601 문자열 (예: "...Z") 처리
         try {
           dateObj = new Date(dtstr);
         } catch (e) {
@@ -291,7 +272,6 @@
           return "";
         }
       }
-
       if (!isNaN(dateObj.getTime())) {
         const HH = String(dateObj.getHours()).padStart(2, '0');
         const mm = String(dateObj.getMinutes()).padStart(2, '0');
@@ -299,13 +279,10 @@
       }
       return "";
     }
-
-    // KST로 변환 함수 (yyyy-MM-dd HH:mm:ss)
     function toKSTString(dtstr) {
       if (!dtstr) return "";
-      // ISO 포맷(2025-07-14T03:37:23.000Z)만 변환
       if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}(\.\d+)?Z$/.test(dtstr)) {
-        const date = new Date(dtstr); // 브라우저의 로컬 시간대로 자동 변환
+        const date = new Date(dtstr);
         if (!isNaN(date.getTime())) {
           const yyyy = date.getFullYear();
           const MM = String(date.getMonth() + 1).padStart(2, '0');
@@ -316,121 +293,88 @@
           return `${yyyy}-${MM}-${dd} ${HH}:${mm}:${ss}`;
         }
       }
-      // yyyy-MM-dd HH:mm:ss 이미 변환되어 있으면 그대로
       if (/^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(dtstr)) {
         return dtstr;
       }
-      // 기타 포맷은 원문 그대로
       return dtstr;
     }
 
-    // scheduleDatetime에서 시간(HH)을 추출하는 헬퍼 함수
+    // === 변경: 숫자/문자 모두 지원하도록 개선 ===
     function getHourFromScheduleDatetime(scheduleDatetime) {
-      console.log(`[getHourFromScheduleDatetime] Input scheduleDatetime type: ${typeof scheduleDatetime}, value: '${scheduleDatetime}'`);
-      
+      if (typeof scheduleDatetime === "number") {
+        scheduleDatetime = String(scheduleDatetime);
+      }
       if (typeof scheduleDatetime !== 'string' || !scheduleDatetime) {
-        console.log("[getHourFromScheduleDatetime] scheduleDatetime is not a string or is empty/null.");
         return null;
       }
-      
-      let dtStr = scheduleDatetime.trim(); // Trim whitespace just in case
-      if (dtStr.length < 10) { // YYYYMMDDHHMM or YYYYMMDDHHMMSS
-        console.log(`[getHourFromScheduleDatetime] scheduleDatetime string too short (${dtStr.length}). Value: '${dtStr}'`);
-        return null;
-      }
-      
-      // Attempt to extract hour string
+      let dtStr = scheduleDatetime.trim();
+      if (dtStr.length < 10) return null;
       const hourStr = dtStr.substring(8, 10);
       const hour = parseInt(hourStr, 10);
-      
-      console.log(`[getHourFromScheduleDatetime] Extracted hourStr: '${hourStr}', Parsed hour: ${hour}, isNaN(hour): ${isNaN(hour)}`);
-      
       return isNaN(hour) ? null : hour;
     }
-
 
     async function loadBagDataAndRender() {
       document.getElementById("bag-tbody").innerHTML = `<tr><td colspan="17">데이터를 불러오는 중...</td></tr>`; 
       const today = new Date();
       const todayFormatted = getFormattedDate(today);
-
-      // 오늘 출발일 날짜 표시
       document.getElementById("todayDateDisplay").innerText = dateKor(todayFormatted);
-
       try {
         let res = await fetch(BAG_JSON_URL + "?" + Date.now());
         if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
         let raw = await res.json();
-        console.log("Raw data received from API:", raw); // Log the entire raw data
         BAG_DATA = Array.isArray(raw) ? raw : (raw.data || []);
-        console.log("Processed BAG_DATA. Sample scheduleDatetime values:");
-        BAG_DATA.slice(0, 5).forEach((row, index) => {
-          console.log(`  Row ${index}: scheduleDatetime='${row.scheduleDatetime}', extractedHour=${getHourFromScheduleDatetime(row.scheduleDatetime)}`);
-        });
-        
         // 터미널 옵션 동적생성
         let terminalSelect = document.getElementById("terminalId");
         let terminals = [...new Set(BAG_DATA.map(row => row.terminalId).filter(t => t !== undefined && t !== null && t !== ''))].sort();
         terminalSelect.innerHTML = `<option value="">전체</option>` + 
                                    terminals.map(t => `<option value="${t}">${t}</option>`).join('');
         terminalSelect.value = "";
-
-        // 시간대 옵션 동적생성 (scheduleDatetime에서 추출)
+        // 시간대 옵션 동적생성
         let opsHourSelect = document.getElementById("opsHourFilter");
         let uniqueHours = new Set();
         BAG_DATA.forEach(row => {
           const hour = getHourFromScheduleDatetime(row.scheduleDatetime);
-          if (hour !== null) {
-            uniqueHours.add(hour);
-          }
+          if (hour !== null) uniqueHours.add(hour);
         });
         let sortedOpsHours = Array.from(uniqueHours).sort((a,b) => a-b);
         opsHourSelect.innerHTML = `<option value="">전체</option>` + 
                                   sortedOpsHours.map(h => {
                                     const hourStr = String(h).padStart(2, '0');
-                                    return `<option value="${hourStr}">${hourStr}시</option>`; // HH시 형태로 표시
+                                    return `<option value="${hourStr}">${hourStr}시</option>`;
                                   }).join('');
         opsHourSelect.value = "";
-        console.log("Generated Ops Hour Options:", sortedOpsHours); // 디버깅 로그
-
         // 스탠드 옵션 동적생성
         let fstandPositionSelect = document.getElementById("fstandPosition");
         let fstandPositions = [...new Set(BAG_DATA.map(row => row.fstandPosition).filter(s => s !== undefined && s !== null && s !== ''))].sort();
         fstandPositionSelect.innerHTML = `<option value="">전체</option>` + 
                                          fstandPositions.map(s => `<option value="${s}">${s}</option>`).join('');
         fstandPositionSelect.value = "";
-
         // 활주로 옵션 동적생성
         let runwaySelect = document.getElementById("runway");
         let runways = [...new Set(BAG_DATA.map(row => row.runway).filter(r => r !== undefined && r !== null && r !== ''))].sort();
         runwaySelect.innerHTML = `<option value="">전체</option>` + 
                                  runways.map(r => `<option value="${r}">${r}</option>`).join('');
         runwaySelect.value = "";
-
         // 게이트 옵션 동적생성
         let gateNoSelect = document.getElementById("gateNo");
-        let gateNos = [...new Set(BAG_DATA.map(row => row.gateNo).filter(g => g !== undefined && g !== null && g !== ''))].sort((a,b) => String(a).localeCompare(String(b))); // 문자열로 비교하여 정렬
+        let gateNos = [...new Set(BAG_DATA.map(row => row.gateNo).filter(g => g !== undefined && g !== null && g !== ''))].sort((a,b) => String(a).localeCompare(String(b)));
         gateNoSelect.innerHTML = `<option value="">전체</option>` + 
                                  gateNos.map(g => `<option value="${g}">${g}</option>`).join('');
         gateNoSelect.value = "";
-
         // 벨트 옵션 동적생성
         let bagCarouselIdSelect = document.getElementById("bagCarouselId");
-        let bagCarousels = [...new Set(BAG_DATA.map(row => row.bagCarouselId).filter(b => b !== undefined && b !== null && b !== ''))].sort((a,b) => String(a).localeCompare(String(b))); // 문자열로 비교하여 정렬
+        let bagCarousels = [...new Set(BAG_DATA.map(row => row.bagCarouselId).filter(b => b !== undefined && b !== null && b !== ''))].sort((a,b) => String(a).localeCompare(String(b)));
         bagCarouselIdSelect.innerHTML = `<option value="">전체</option>` + 
                                         bagCarousels.map(b => `<option value="${b}">${b}</option>`).join('');
         bagCarouselIdSelect.value = "";
-
         // 출구 옵션 동적생성
         let exitNumberSelect = document.getElementById("exitNumber");
-        let exitNumbers = [...new Set(BAG_DATA.map(row => (row.exitNumber || row.exit)).filter(e => e !== undefined && e !== null && e !== ''))].sort((a,b) => String(a).localeCompare(String(b))); // 문자열로 비교하여 정렬
+        let exitNumbers = [...new Set(BAG_DATA.map(row => (row.exitNumber || row.exit)).filter(e => e !== undefined && e !== null && e !== ''))].sort((a,b) => String(a).localeCompare(String(b)));
         exitNumberSelect.innerHTML = `<option value="">전체</option>` + 
                                      exitNumbers.map(e => `<option value="${e}">${e}</option>`).join('');
         exitNumberSelect.value = "";
-
-
-        renderBagTable(todayFormatted); // 오늘 날짜만 전달
-        // updated_at 컬럼에서 가장 최근값만 그대로 표시, KST 변환 포함
+        renderBagTable(todayFormatted);
         let latestUpdatedAt = "";
         if (BAG_DATA.length > 0) {
           let sorted = BAG_DATA
@@ -446,21 +390,15 @@
       }
     }
 
-    function renderBagTable(todayFormatted) { // todayFormatted만 받도록 수정
+    function renderBagTable(todayFormatted) {
       let tbody = document.getElementById("bag-tbody");
       let f = {};
-      // 필터 항목 ID 목록 업데이트 (dateSelect 제거)
       ["kal_oal","airlineCode","flightId","airportcode","op_type","opsHourFilter","status","terminalId","fstandPosition","runway","gateNo","bagCarouselId","exitNumber"].forEach(id=>{
         f[id] = document.getElementById(id).value.trim();
       });
-
       let filtered = BAG_DATA.filter(row => {
         let rowDate = row.date ? row.date.toString() : "";
-        
-        // 무조건 오늘 날짜만 표시
         if (rowDate !== todayFormatted) return false;
-        
-        // 콤보박스 필터링 (정확히 일치)
         const comboFilters = ["kal_oal", "op_type", "status", "terminalId", "fstandPosition", "runway", "gateNo", "bagCarouselId"];
         for (let k of comboFilters) {
           if (f[k]) {
@@ -468,35 +406,22 @@
             if (rowValue !== f[k]) return false;
           }
         }
-
-        // 시간대 필터링 로직 (opsHourFilter) - 콤보박스
         if (f.opsHourFilter) {
           const scheduledHour = getHourFromScheduleDatetime(row.scheduleDatetime);
-          const filterHourStr = f.opsHourFilter; // 콤보박스 값은 이미 HH 형태의 문자열
-          
-          console.log(`[renderBagTable] Filtering row: scheduleDatetime='${row.scheduleDatetime}', extractedHour=${scheduledHour}, filterHour='${filterHourStr}'`); // 디버깅 로그
-
+          const filterHourStr = f.opsHourFilter;
           if (scheduledHour === null || String(scheduledHour).padStart(2, '0') !== filterHourStr) {
             return false;
           }
         }
-
-        // 텍스트 입력 필드는 대소문자 구분 없이 indexOf 사용.
         if (f.airlineCode && (!row.airlineCode || row.airlineCode.toLowerCase().indexOf(f.airlineCode.toLowerCase()) === -1)) return false;
         if (f.flightId && (!row.flightId || row.flightId.toLowerCase().indexOf(f.flightId.toLowerCase()) === -1)) return false;
-        
-        // 공항코드 필터링 (airportcode 또는 airportCode 필드 모두 확인)
         if (f.airportcode && 
             ( !(row.airportcode && row.airportcode.toLowerCase().indexOf(f.airportcode.toLowerCase()) !== -1) && 
               !(row.airportCode && row.airportCode.toLowerCase().indexOf(f.airportcode.toLowerCase()) !== -1) )
            ) return false;
-        
-        // 출구 필터링 (exitNumber 또는 exit 필드 모두 확인, 콤보박스이므로 정확히 일치)
         if (f.exitNumber && ((row.exitNumber || row.exit) || "").toString() !== f.exitNumber) return false;
-
         return true; 
       });
-
       document.getElementById("rowCount").innerText = `총 ${filtered.length}건`; 
       if (filtered.length === 0) {
         tbody.innerHTML = `<tr><td colspan="17">일치하는 데이터가 없습니다.</td></tr>`;
@@ -504,16 +429,13 @@
       }
       tbody.innerHTML = filtered.map(row => `
         <tr>
-          <!-- <td>${dateKor(row.date)||""}</td> 제거 -->
           <td class="two-line">${row.kal_oal||""}</td>
-          <!-- <td class="two-line">${row.airlineCode||""}</td> 제거 -->
           <td class="two-line">${row.flightId ? row.flightId.slice(0,2) + '<br>' + row.flightId.slice(2) : ""}</td>
           <td>${row.airportcode||row.airportCode||""}</td>
           <td>${row.op_type||""}</td>
           <td>${toHHMMString(row.scheduleDatetime)||""}</td>
           <td>${toHHMMString(row.estimatedDatetime)||""}</td>
           <td>${toHHMMString(row.landingDatetime)||""}</td>
-          <!-- <td>${formatDifferenceTime(row.difftime)||""}</td> 제거 -->
           <td>${row.status||""}</td>
           <td>${row.terminalId||""}</td>
           <td>${row.fstandPosition||""}</td>
@@ -535,23 +457,17 @@
       e.preventDefault();
       const today = new Date();
       const todayFormatted = getFormattedDate(today);
-      renderBagTable(todayFormatted); // 오늘 날짜만 전달
+      renderBagTable(todayFormatted);
     };
-
-    // 초기화 버튼 클릭 이벤트 리스너 추가
     document.getElementById("resetBtn").onclick = function() {
-      // 모든 select 박스 초기화
       document.querySelectorAll('.filters select').forEach(select => {
         select.value = "";
       });
-      // 모든 input 텍스트 필드 초기화
       document.querySelectorAll('.filters input[type="text"]').forEach(input => {
         input.value = "";
       });
-      // 데이터 다시 로드 및 렌더링 (필터 초기화 후 전체 데이터 표시)
       loadBagDataAndRender();
     };
-
     window.onload = function() {
       loadBagDataAndRender();
     };
