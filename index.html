@@ -207,7 +207,7 @@
 
       let filtered = BAG_DATA.filter(row => {
         let rowDate = row.date ? row.date.toString() : "";
-        // 무조건 오늘/내일(yyyyMMdd)만 표시
+        // 무조건 오늘/내일(yyyyMMdd)만 표시 (Apps Script에서 이미 필터 적용해둔 상태)
         if (!(rowDate === todayFormatted || rowDate === tomorrowFormatted)) return false;
         // date 필터(전체: 빈값)이 아니면, 필터값만 표시
         if (f.date && rowDate !== f.date) return false;
