@@ -182,17 +182,13 @@
         BAG_DATA = Array.isArray(raw) ? raw : (raw.data || []);
         renderBagTable(todayFormatted, tomorrowFormatted);
 
-        // updated_at 컬럼에서 가장 최근값 구하기
+        // updated_at 컬럼에서 가장 최근값(포맷 변환 없이 그대로) 구하기
         let latestUpdatedAt = "";
         if (BAG_DATA.length > 0) {
           let sorted = BAG_DATA
             .filter(r => r.updated_at)
             .sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1));
           latestUpdatedAt = sorted.length > 0 ? sorted[0].updated_at : "";
-          if (latestUpdatedAt && latestUpdatedAt.length >= 19) {
-            // yyyy-MM-dd HH:mm:ss → yyyy. MM. dd. HH:mm:ss 포맷 변환
-            latestUpdatedAt = latestUpdatedAt.replace(/-/g, ". ").replace(" ", ". ");
-          }
         }
         document.getElementById("updated_at").innerText = latestUpdatedAt || "-";
       } catch(e) {
