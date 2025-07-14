@@ -36,9 +36,7 @@
     </div>
     <form class="filters" id="filters">
       <label>출발일
-        <select id="date">
-          <!-- 옵션 동적생성 -->
-        </select>
+        <select id="date"></select>
       </label>
       <label>KAL/OAL
         <select id="kal_oal"><option value="">전체</option><option value="KAL">KAL</option><option value="OAL">OAL</option></select>
@@ -183,13 +181,24 @@
         let raw = await res.json();
         BAG_DATA = Array.isArray(raw) ? raw : (raw.data || []);
         renderBagTable(todayFormatted, tomorrowFormatted);
-        let currentKST = new Date().toLocaleString('ko-KR', {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12:false});
-        document.getElementById("updated_at").innerText = currentKST;
+
+        // updated_at 컬럼에서 가장 최근값 구하기
+        let latestUpdatedAt = "";
+        if (BAG_DATA.length > 0) {
+          let sorted = BAG_DATA
+            .filter(r => r.updated_at)
+            .sort((a, b) => (a.updated_at < b.updated_at ? 1 : -1));
+          latestUpdatedAt = sorted.length > 0 ? sorted[0].updated_at : "";
+          if (latestUpdatedAt && latestUpdatedAt.length >= 19) {
+            // yyyy-MM-dd HH:mm:ss → yyyy. MM. dd. HH:mm:ss 포맷 변환
+            latestUpdatedAt = latestUpdatedAt.replace(/-/g, ". ").replace(" ", ". ");
+          }
+        }
+        document.getElementById("updated_at").innerText = latestUpdatedAt || "-";
       } catch(e) {
         console.error("데이터 로드 오류:", e); 
         document.getElementById("bag-tbody").innerHTML = `<tr><td colspan="20">데이터 로드 오류가 발생했습니다. (콘솔 확인)</td></tr>`;
-        let currentKST = new Date().toLocaleString('ko-KR', {year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit', hour12:false});
-        document.getElementById("updated_at").innerText = currentKST + " (오류 발생)";
+        document.getElementById("updated_at").innerText = "- (오류 발생)";
       }
     }
 
@@ -263,7 +272,6 @@
     };
     document.getElementById("filters").onsubmit = function(e) {
       e.preventDefault();
-      // 날짜 옵션 갱신
       renderBagTable(
         document.getElementById("date").options[1].value,
         document.getElementById("date").options[2].value
